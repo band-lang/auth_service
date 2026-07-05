@@ -1,0 +1,31 @@
+#Core
+fastapi==0.137.1
+uvicorn[standard]==0.49.0
+starlette>=1.3.1
+pydantic[email]==2.13.2
+python-dotenv==1.2.2
+python-multipart==0.0.32
+
+#Database
+sqlalchemy[asyncio]==2.0.50
+alembic==1.18.4
+asyncpg==0.31.0
+redis==8.0.0
+
+# Security
+argon2-cffi==25.1.0
+pyotp==2.10.0
+
+# Testing
+httpx==0.28.1
+pytest==9.1.0
+pytest_asyncio==1.4.0
+
+#Sending mails
+aiosmtplib==5.1.1
+
+#QR codes generation for TOTP
+qrcode[pil]==8.2
+
+#Logging
+structlog==26.1.0
