@@ -10,7 +10,10 @@ python-multipart==0.0.32
 sqlalchemy[asyncio]==2.0.50
 alembic==1.18.4
 asyncpg==0.31.0
+
+#Redis
 redis==8.0.0
+saq==0.26.4
 
 # Security
 argon2-cffi==25.1.0
@@ -23,6 +26,9 @@ pytest_asyncio==1.4.0
 
 #Sending mails
 aiosmtplib==5.1.1
+
+#Rendering templates
+jinja2>=3.0.0
 
 #QR codes generation for TOTP
 qrcode[pil]==8.2

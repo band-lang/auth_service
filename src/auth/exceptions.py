@@ -1,0 +1,117 @@
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from src.exceptions import AppException
+
+
+#Email custom exceptions
+class EmailError(AppException):
+    """Base email exception"""
+    status_code = 502
+    error_type = "EMAIL ERROR"
+
+
+#-----Temporary Errors-----#
+class EmailTemporaryError(EmailError):
+    """Email temporary error"""
+
+
+class EmailConnectionError(EmailTemporaryError):
+    error_type = "EMAIL CONNECTION ERROR"
+
+    def __init__(self, email: str) -> None:
+        super().__init__(message=f"Email connection error: {email}")
+
+
+class EmailTimeoutError(EmailTemporaryError):
+    error_type = "EMAIL TIMEOUT ERROR"
+
+    def __init__(self) -> None:
+        super().__init__(message="Timeout connecting to mail server")
+
+
+#-----Permanent Errors-----#
+class EmailPermanentError(EmailError):
+    """Email permanent error"""
+    pass
+
+
+class EmailAuthError(EmailPermanentError):
+    status_code = 500
+    error_type = "EMAIL AUTH ERROR"
+
+    def __init__(self) -> None:
+        super().__init__(message="SMTP authentication failed.")
+
+
+class EmailRecipientRefusedError(EmailPermanentError):
+    status_code = 400
+    error_type = "EMAIL RECIPIENT REFUSED ERROR"
+
+    def __init__(self, email: str) -> None:
+        super().__init__(message=f"Recipient refused: {email}")
+
+
+class EmailSenderRefusedError(EmailPermanentError):
+    status_code = 500
+    error_type = "EMAIL SENDER REFUSED ERROR"
+
+    def __init__(self) -> None:
+        super().__init__(message=f'Sender refused error. Check .env file.')
+
+
+#Exceptions for client
+class CodeNotFoundError(AppException):
+    status_code = 404
+    error_type = "CODE NOT FOUND ERROR"
+
+    def __init__(self) -> None:
+        super().__init__(message="Code not found or expired.")
+
+
+class CodeSendingRatelimitError(AppException):
+    status_code = 429
+    error_type = "CODE SENDING RATE LIMIT ERROR"
+
+    def __init__(self):
+        super().__init__(message="The code sending limit has been exceeded. Please, request a new code.")
+
+
+class TooManyVerificationAttemptsError(AppException):
+    status_code = 429
+    error_type = "TOO MANY VERIFICATION ATTEMPTS ERROR"
+
+    def __init__(self):
+        super().__init__(message="Too many incorrect attempts. Please try again later.")
+
+
+class IncorrectCodeError(AppException):
+    status_code = 400
+    error_type = "INCORRECT CODE ERROR"
+
+    def __init__(self):
+        super().__init__(message="Incorrect code.")
+
+
+#User custom exceptions 
+class BaseUserException(AppException):
+    """Base user exception."""
+    pass
+
+
+class EmailAlreadyExistsError(BaseUserException):
+    status_code = 409
+    error_type = 'EMAIL ALREADY EXISTS ERROR'
+
+    def __init__(self):
+        super().__init__(message="Email already exists.")
+
+
+#Handler
+def app_exception_handler(
+    request: Request,
+    exc: AppException
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.error_type, "message": exc.message}
+    )
