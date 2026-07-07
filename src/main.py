@@ -2,6 +2,7 @@ from typing import AsyncIterator
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from redis.asyncio import Redis
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from src.auth import router as auth_router
 from src.config import REDIS_HOST, REDIS_PORT, REDIS_MAX_CONNECTIONS
 from src.auth.exceptions import app_exception_handler, AppException
@@ -31,6 +32,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.add_exception_handler(AppException, app_exception_handler)
-app.add_exception_handler(DatabaseException, database_errors_handler)
-app.include_router(auth_router.router)
+app.add_exception_handler(AppException, app_exception_handler) # type: ignore[arg-type]
+app.add_exception_handler(DatabaseException, database_errors_handler) # type: ignore[arg-type]
+
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
+
+app.include_router(auth_router.router, prefix='/auth')

@@ -1,5 +1,6 @@
 import asyncio
 import random
+from typing import Any
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from email.mime.text import MIMEText
@@ -38,7 +39,7 @@ TEMPLATES_DIR = Path(__file__).parent / "templates" / "email"
 jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
 
 
-def render_template(template_name: str, **kwargs) -> str:
+def render_template(template_name: str, **kwargs: Any) -> str:
     """Render html templates with passed arguments"""
     template = jinja_env.get_template(template_name)
     return template.render(**kwargs)
@@ -169,7 +170,7 @@ async def send_email(to: str, subject: str, body: str, message_type: str) -> Non
             mail_port=MAIL_PORT,
             error=str(e)
         )
-        raise EmailPermanentError(f"Unknown SMTP Permanent Error: {e.code}")
+        raise EmailPermanentError(f"Unknown SMTP Permanent Error")
     
     except Exception as e:
         logger.exception(

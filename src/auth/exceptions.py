@@ -72,7 +72,7 @@ class CodeSendingRatelimitError(AppException):
     status_code = 429
     error_type = "CODE SENDING RATE LIMIT ERROR"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(message="The code sending limit has been exceeded. Please, request a new code.")
 
 
@@ -80,7 +80,7 @@ class TooManyVerificationAttemptsError(AppException):
     status_code = 429
     error_type = "TOO MANY VERIFICATION ATTEMPTS ERROR"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(message="Too many incorrect attempts. Please try again later.")
 
 
@@ -88,7 +88,7 @@ class IncorrectCodeError(AppException):
     status_code = 400
     error_type = "INCORRECT CODE ERROR"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(message="Incorrect code.")
 
 
@@ -102,8 +102,24 @@ class EmailAlreadyExistsError(BaseUserException):
     status_code = 409
     error_type = 'EMAIL ALREADY EXISTS ERROR'
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(message="Email already exists.")
+
+
+class IncorrectPasswordError(BaseUserException):
+    status_code = 401
+    error_type = 'INCORRECT PASSWORD ERROR'
+
+    def __init__(self) -> None:
+        super().__init__(message="You entered incorrect password.")
+
+
+class UserNotFoundError(BaseUserException):
+    status_code = 404
+    error_type = 'USER NOT FOUND ERROR'
+
+    def __init__(self) -> None:
+        super().__init__(message="User not found.")
 
 
 #Handler

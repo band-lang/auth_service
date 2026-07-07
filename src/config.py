@@ -26,3 +26,8 @@ MAIL_PORT = int(os.environ["MAIL_PORT"])
 
 #App
 APP_NAME = os.getenv('APP_NAME', 'Auth service')
+
+
+#Security
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ['ACCESS_TOKEN_EXPIRE_MINUTES'])
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ['REFRESH_TOKEN_EXPIRE_DAYS'])

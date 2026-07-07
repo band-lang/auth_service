@@ -1,5 +1,8 @@
 import json
 from datetime import datetime, timezone
+from typing import cast
+from saq.types import Context
+from redis.asyncio import Redis
 from src.logger import logger
 from src.auth.email_utils import (
     send_verification_mail,
@@ -31,7 +34,7 @@ PERMANENT_ERRORS = (
 )
 
 
-async def send_verification_email(ctx, *, email: str, code: str) -> None:
+async def send_verification_email(ctx: Context, *, email: str, code: str) -> None:
     """Func send verification mail worker"""
     
     try:
@@ -44,7 +47,7 @@ async def send_verification_email(ctx, *, email: str, code: str) -> None:
             error=str(e)
         )
         # Сохраняем в Dead Letter Queue
-        redis = ctx["redis"]
+        redis = cast(Redis, ctx.get("redis"))
         await redis.lpush(
             "dead_letters",
             json.dumps({

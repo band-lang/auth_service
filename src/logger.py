@@ -1,13 +1,14 @@
 import logging
 import structlog
 import sys
+from typing import Any
 from pathlib import Path
 
 
 _configured = False
 
 
-def setup_logger(name: str = "petushokgram"):
+def setup_logger(name: str = "petushokgram") -> Any:
     global _configured
 
     if _configured is False:

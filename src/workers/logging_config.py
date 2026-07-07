@@ -2,7 +2,7 @@ import logging
 import sys
 
 
-def setup_worker_logging(level=logging.INFO):
+def setup_worker_logging(level:int = logging.INFO) -> None:
     """Logger for worker"""
 
     logger = logging.getLogger("saq")

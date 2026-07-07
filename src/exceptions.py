@@ -27,7 +27,7 @@ class RedisStorageError(DatabaseException):
     status_code = 500
     error_type = "REDIS ERROR"
 
-    def __init__(self, message):
+    def __init__(self, message: str) -> None:
         super().__init__(message)
 
 
@@ -36,7 +36,7 @@ class DatabaseError(DatabaseException):
     status_code = 500
     error_type = "DATABASE ERROR"
 
-    def __init__(self, message):
+    def __init__(self, message: str) -> None:
         super().__init__(message)
 
 
@@ -45,7 +45,8 @@ def database_errors_handler(
     exc: DatabaseException
 ) -> JSONResponse:
     logger.exception(
-        msg=str(exc)
+        msg="database_error",
+        error=str(exc)
     )
     
     return JSONResponse(
