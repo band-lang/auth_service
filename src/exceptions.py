@@ -45,7 +45,7 @@ def database_errors_handler(
     exc: DatabaseException
 ) -> JSONResponse:
     logger.exception(
-        msg=exc.__cause__
+        msg=str(exc)
     )
     
     return JSONResponse(

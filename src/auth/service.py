@@ -1,7 +1,7 @@
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 from src.auth.schemas import UserCreate
 from src.auth.exceptions import EmailAlreadyExistsError
 from src.exceptions import RedisStorageError, DatabaseError
@@ -20,9 +20,9 @@ async def create_verification_keys(
 
     async with redis_client.pipeline(transaction=True) as pipe:
         # Код верификации
-        pipe.setex(f"email:verif:{user_id}:code", code, 600)
+        pipe.setex(f"email:verif:{user_id}:code", 600, code)
         # Счётчик попыток
-        pipe.setex(f"email:verif:{user_id}:attempts", "1", 600)
+        pipe.setex(f"email:verif:{user_id}:attempts", 600, "1")
         await pipe.execute()
 
     # Задача в SAQ (отдельно от pipeline)

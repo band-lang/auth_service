@@ -18,5 +18,5 @@ settings = {
     ],
     "concurrency": 10,
     "startup": startup,
-    "shutdown": shutdown,
+    "shutdown": shutdown
 }
