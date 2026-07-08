@@ -81,7 +81,7 @@ async def get_refresh_tokens(
     return result.scalars()
 
 
-async def get_refresh_token(
+async def get_refresh_token_by_hash(
     refresh_token: str,
     db_session: AsyncSession
 ) -> RefreshToken | None:

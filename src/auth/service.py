@@ -21,7 +21,7 @@ from src.auth.queries import (
     create_user,
     get_user_by_id,
     get_refresh_tokens,
-    get_refresh_token
+    get_refresh_token_by_hash
 )
 from src.auth.redis_helpers import create_verification_keys, create_tokens
 from src.auth.email_utils import generate_code
@@ -208,7 +208,7 @@ async def refresh_tokens_service(
     redis_client: Redis
 ) -> dict[str, str]:
     try:
-        refresh_token = await get_refresh_token(inputed_refresh_token, db_session)
+        refresh_token = await get_refresh_token_by_hash(inputed_refresh_token, db_session)
     except SQLAlchemyError as e:
         raise DatabaseError('Error with getting refresh token from database.') from e
     
@@ -221,9 +221,8 @@ async def refresh_tokens_service(
     try:
         refresh_tokens = await get_refresh_tokens(user.id, db_session)
 
-        if refresh_tokens:
-            for refresh_token in refresh_tokens:
-                refresh_token.is_revoked = True
+        for refresh_token in refresh_tokens:
+            refresh_token.is_revoked = True
 
         tokens = await create_tokens(
             db_session,
@@ -255,3 +254,27 @@ async def refresh_tokens_service(
         'access_token': tokens['access_token'],
         'refresh_token': tokens['refresh_token']
     }
+
+
+async def revoke_tokens_service(
+    access_token: str,
+    transferred_refresh_token: str,
+    db_session: AsyncSession,
+    redis_client: Redis
+) -> dict[str, str]:
+    try:
+        refresh_token = await get_refresh_token_by_hash(transferred_refresh_token, db_session)
+
+        if refresh_token:
+            refresh_token.is_revoked = True
+
+        await redis_client.delete(f"access_token:{access_token}")
+        await db_session.commit()
+    except SQLAlchemyError as e:
+        await db_session.rollback()
+        raise DatabaseError('Error with setting status revoked for refresh token in database.') from e
+    except RedisError as e:
+        await db_session.rollback()
+        raise RedisStorageError('Error with deleting key from redis.') from e
+    
+    return {'status': 'Logouted.'}

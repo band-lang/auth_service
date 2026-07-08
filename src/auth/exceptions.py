@@ -169,7 +169,7 @@ class RefreshTokenRevokedError(BaseTokenException):
 
     def __init__(self) -> None:
         super().__init__(message='Refresh token revoked.')
-
+        
 
 #Handler
 def app_exception_handler(

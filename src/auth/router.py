@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.models import User
@@ -15,11 +16,13 @@ from src.auth.service import (
     register_user_service,
     login_user_request_service,
     create_tokens_service,
-    refresh_tokens_service
+    refresh_tokens_service,
+    revoke_tokens_service
 )
 
 
 router = APIRouter()
+security = HTTPBearer()
 
 # Dev endpoints
 @router.get('/')
@@ -77,3 +80,14 @@ async def refresh_tokens_router(
     redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str]:
     return await refresh_tokens_service(inputed_refresh_token.refresh_token, user, user_info, db_session, redis_client)
+
+
+@router.delete('/tokens/revoke')
+async def revoke_tokens_router(
+    inputed_refresh_token: RefreshTokensRequest,
+    user: User = Depends(get_active_user),
+    access_token: HTTPAuthorizationCredentials = Depends(security),
+    db_session: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis)
+) -> dict[str, str]:
+    return await revoke_tokens_service(access_token.credentials, inputed_refresh_token.refresh_token, db_session, redis_client)
