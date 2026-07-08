@@ -11,6 +11,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     totp_secret: Mapped[str] = mapped_column(String(256), nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_suspicious: Mapped[bool] = mapped_column(default=False)
 
 
 class RefreshToken(Base):

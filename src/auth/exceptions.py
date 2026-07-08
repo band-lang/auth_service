@@ -5,14 +5,14 @@ from src.exceptions import AppException
 
 #Email custom exceptions
 class EmailError(AppException):
-    """Base email exception"""
+    """Base email exception class"""
     status_code = 502
     error_type = "EMAIL ERROR"
 
 
 #-----Temporary Errors-----#
 class EmailTemporaryError(EmailError):
-    """Email temporary error"""
+    """Email temporary error class"""
 
 
 class EmailConnectionError(EmailTemporaryError):
@@ -31,7 +31,7 @@ class EmailTimeoutError(EmailTemporaryError):
 
 #-----Permanent Errors-----#
 class EmailPermanentError(EmailError):
-    """Email permanent error"""
+    """Email permanent error class"""
     pass
 
 
@@ -94,7 +94,7 @@ class IncorrectCodeError(AppException):
 
 #User custom exceptions 
 class BaseUserException(AppException):
-    """Base user exception."""
+    """Base user exception class."""
     pass
 
 
@@ -120,6 +120,55 @@ class UserNotFoundError(BaseUserException):
 
     def __init__(self) -> None:
         super().__init__(message="User not found.")
+
+
+class UserNotVerifiedError(BaseUserException):
+    status_code = 401
+    error_type = 'USER NOT VERIFIED ERROR'
+
+    def __init__(self) -> None:
+        super().__init__(message='Your account is not verified. First, confirm your email.')
+
+
+class UserAccountLimited(BaseUserException):
+    status_code = 400
+    error_type = "ACCOUNT SUSPICIOUS ERROR"
+
+    def __init__(self) -> None:
+        super().__init__(message='Account temporarily restricted due to suspicious activity. Please check your email.')
+
+
+# Token custom exceptions
+class BaseTokenException(AppException):
+    """Base token exception class."""
+    pass
+
+
+class TokenDamagedError(BaseTokenException):
+    """Token damaged exception class."""
+    status_code = 401
+    error_type = "TOKEN WAS DAMAGED ERROR"
+
+    def __init__(self) -> None:
+        super().__init__(message='Your token was damaged.')
+
+
+class InvalidTokenError(BaseTokenException):
+    """Invalid token exception class."""
+    status_code = 401
+    error_type = 'INVALID TOKEN ERROR'
+
+    def __init__(self) -> None:
+        super().__init__(message='You entered invalid token.')
+
+
+class RefreshTokenRevokedError(BaseTokenException):
+    """Refresh token revoked exception class."""
+    status_code = 403
+    error_type = 'REFRESH TOKEN REVOKED ERROR'
+
+    def __init__(self) -> None:
+        super().__init__(message='Refresh token revoked.')
 
 
 #Handler

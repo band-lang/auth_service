@@ -1,8 +1,9 @@
+import hashlib
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.auth.models import User, RefreshToken
-from src.auth.schemas import UserCreate
+from src.auth.schemas import UserCreateRequest
 from src.auth.utils import hash_password
 from src.config import REFRESH_TOKEN_EXPIRE_DAYS
 
@@ -33,7 +34,7 @@ async def get_user_by_id(
 
 
 async def create_user(
-    user_data: UserCreate,
+    user_data: UserCreateRequest,
     db_session: AsyncSession
 ) -> User:
     hashed_password = hash_password(user_data.password.get_secret_value())
@@ -49,6 +50,7 @@ async def create_user(
     return user
 
 
+# Refresh tokens
 async def create_refresh_token(
     hashed_token: str,
     user_id: int,
@@ -66,3 +68,27 @@ async def create_refresh_token(
 
     db_session.add(refresh_token)
     await db_session.flush()
+
+
+async def get_refresh_tokens(
+    user_id: int,
+    db_session: AsyncSession
+) -> list[RefreshToken]:
+    result = await db_session.execute(
+        select(RefreshToken)
+        .where(RefreshToken.user_id == user_id)
+    )
+    return result.scalars()
+
+
+async def get_refresh_token(
+    refresh_token: str,
+    db_session: AsyncSession
+) -> RefreshToken | None:
+    hashed_refresh_token = hashlib.sha256(refresh_token.encode("utf-8")).hexdigest()
+
+    result = await db_session.execute(
+        select(RefreshToken)
+        .where(RefreshToken.token_hash == hashed_refresh_token)
+    )
+    return result.scalar_one_or_none()

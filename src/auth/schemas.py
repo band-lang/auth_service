@@ -3,21 +3,25 @@ from pydantic import BaseModel, Field, EmailStr, SecretStr
 
 
 #User schemas
-class UserCreate(BaseModel):
+class UserCreateRequest(BaseModel):
     email: EmailStr
     password: Annotated[SecretStr, Field(min_length=8, max_length=256, examples=[">_BlSBz<PwG@]i0"])]
 
 
-class UserVerifyRequest(BaseModel):
+class CreateTokensRequest(BaseModel):
     user_id: int
-    code: str = Field(min_length=8, max_length=8, json_schema_extra={"example": "password123"})
+    code: str = Field(min_length=8, max_length=8, json_schema_extra={"example": "12345678"})
 
 
-class UserVerifyResponse(BaseModel):
+class CreateTokensResponse(BaseModel):
     access_token: str
+    refresh_token: str
+
+
+class RefreshTokensRequest(BaseModel):
     refresh_token: str
 
 
 class UserInfo(BaseModel):
     user_agent: str | None
-    ip_adress: str | None
+    ip_address: str | None

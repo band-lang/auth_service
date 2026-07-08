@@ -2,7 +2,8 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
 ph = PasswordHasher()
-
+# For protection against timing attacks
+_DUMMY_HASH = ph.hash("dummy_value_for_timing_protection")
 
 def hash_password(password: str) -> str:
     return ph.hash(password)
