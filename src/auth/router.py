@@ -11,13 +11,19 @@ from src.auth.schemas import (
     RefreshTokensRequest
 )
 from src.database import get_db
-from src.auth.dependencies import get_redis, get_user_info, get_active_user
+from src.auth.dependencies import (
+    get_redis,
+    get_user_info,
+    get_active_user,
+    get_user_without_suspicious_check
+)
 from src.auth.service import (
     register_user_service,
     login_user_request_service,
     create_tokens_service,
     refresh_tokens_service,
-    revoke_tokens_service
+    revoke_tokens_service,
+    change_password_or_email_request_service
 )
 
 
@@ -91,3 +97,29 @@ async def revoke_tokens_router(
     redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str]:
     return await revoke_tokens_service(access_token.credentials, inputed_refresh_token.refresh_token, db_session, redis_client)
+
+
+@router.post('/password/reset')
+async def reset_password_request_router(
+    user: User = Depends(get_user_without_suspicious_check),
+    redis_client: Redis = Depends(get_redis)
+) -> dict[str, str | int]:
+    return await change_password_or_email_request_service(
+        user,
+        redis_client,
+        code_type="password_reset",
+        task_name="send_mail_change_password"
+    )
+
+
+@router.post('/email/change')
+async def change_email_request_router(
+    user: User = Depends(get_user_without_suspicious_check),
+    redis_client: Redis = Depends(get_redis)
+) -> dict[str, str | int]:
+    return await change_password_or_email_request_service(
+        user,
+        redis_client,
+        code_type="change_email",
+        task_name="send_mail_change_email"
+    )

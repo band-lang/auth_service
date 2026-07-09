@@ -1,7 +1,12 @@
 from saq.types import Context
 from src.workers.queue import queue
 from src.workers.logging_config import setup_worker_logging
-from src.workers.tasks.email import send_verification_email
+from src.workers.tasks.email import (
+    send_mail_verification,
+    send_mail_change_password,
+    send_mail_change_email,
+    send_mail_suspicious_activity
+)
 
 
 async def startup(ctx: Context) -> None:
@@ -15,7 +20,10 @@ async def shutdown(ctx: Context) -> None:
 settings = {
     "queue": queue,
     "functions": [
-        send_verification_email,
+        send_mail_verification,
+        send_mail_change_password,
+        send_mail_change_email,
+        send_mail_suspicious_activity
     ],
     "concurrency": 10,
     "startup": startup,

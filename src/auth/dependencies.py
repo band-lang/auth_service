@@ -77,3 +77,12 @@ async def get_active_user(
         raise UserAccountLimited()
     
     return user
+
+
+async def get_user_without_suspicious_check(
+    user: User = Depends(get_current_user)
+) -> User:
+    if not user.is_verified:
+        raise UserNotVerifiedError()
+    
+    return user

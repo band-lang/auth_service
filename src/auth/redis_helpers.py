@@ -12,23 +12,28 @@ async def create_verification_keys(
     user_id: int,
     email: str,
     code: str,
-    redis_client: Redis
+    redis_client: Redis,
+    *,
+    code_type: str,
+    task_name: str
 ) -> None:
     """Saves the code to Redis and queues a task to send an email."""
 
     async with redis_client.pipeline(transaction=True) as pipe:
         # Verification code
-        pipe.setex(name=f"email:verif:{user_id}:code", time=600, value=code)
+        pipe.setex(name=f"email:{code_type}:{user_id}:code", time=600, value=code)
         # Counter of attempts
-        pipe.setex(name=f"email:verif:{user_id}:attempts", time=600, value="1")
+        pipe.setex(name=f"email:{code_type}:{user_id}:attempts", time=600, value="1")
         await pipe.execute()
 
     # Task in SAQ
     await queue.enqueue(
-        "send_verification_email",
+        task_name,
         email=email,
         code=code,
-        timeout=30
+        timeout=30,
+        retries=3,
+        retry_delay=2.0
     )
 
 

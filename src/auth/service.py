@@ -27,6 +27,7 @@ from src.auth.redis_helpers import create_verification_keys, create_tokens
 from src.auth.email_utils import generate_code
 from src.auth.utils import hash_password, verify_password, _DUMMY_HASH
 from src.logger import logger
+from src.workers.queue import queue
 
 
 async def register_user_service(
@@ -62,7 +63,14 @@ async def register_user_service(
     try:
         user = await create_user(user_data, db_session)
 
-        await create_verification_keys(user.id, user.email, code, redis_client)
+        await create_verification_keys(
+            user.id,
+            user.email,
+            code,
+            redis_client,
+            code_type="verification",
+            task_name='send_mail_verification'
+        )
 
         await db_session.commit()
         await db_session.refresh(user)
@@ -98,7 +106,13 @@ async def login_user_request_service(
     code = generate_code()
     
     try:
-        await create_verification_keys(user.id, user.email, code, redis_client)
+        await create_verification_keys(
+            user.id,
+            user.email, code,
+            redis_client,
+            code_type="verification",
+            task_name='send_mail_verification'
+        )
     except RedisError as e:
         raise RedisStorageError("Error with creating verification keys in redis.") from e
     
@@ -122,14 +136,14 @@ async def create_tokens_service(
         raise UserNotFoundError()
     
     try:
-        verif_code_redis = await redis_client.get(f"email:verif:{user_data.user_id}:code")
-        verif_attempts_redis = await redis_client.get(f"email:verif:{user_data.user_id}:attempts")
+        verif_code_redis = await redis_client.get(f"email:verification:{user_data.user_id}:code")
+        verif_attempts_redis = await redis_client.get(f"email:verification:{user_data.user_id}:attempts")
     except RedisError as e:
         raise RedisStorageError("Error with getting verif user code or attempts from redis.") from e
 
     if not verif_code_redis:
         raise CodeNotFoundError()
-    
+
     if not verif_attempts_redis:
         logger.error(
             "Attempts key not found, but code key exists",
@@ -139,7 +153,8 @@ async def create_tokens_service(
 
     if int(verif_attempts_redis) >= 5:
         try:
-            await redis_client.delete(f"email:verif:{user_data.user_id}:code")
+            await redis_client.delete(f"email:verification:{user_data.user_id}:code")
+            await redis_client.delete(f"email:verification:{user_data.user_id}:attempts")
         except RedisError as e:
             logger.exception(
                 msg="error with deleting key code for verification from redis",
@@ -179,8 +194,8 @@ async def create_tokens_service(
             raise RedisStorageError("Error with creating access token key in redis.") from e
         
         try:
-            await redis_client.delete(f"email:verif:{user_data.user_id}:code")
-            await redis_client.delete(f"email:verif:{user_data.user_id}:attempts")
+            await redis_client.delete(f"email:verification:{user_data.user_id}:code")
+            await redis_client.delete(f"email:verification:{user_data.user_id}:attempts")
         except RedisError as e:
             logger.exception(
                 msg="error deleting keys in redis",
@@ -194,7 +209,7 @@ async def create_tokens_service(
         
     else:
         try:
-            await redis_client.incr(f"email:verif:{user_data.user_id}:attempts")
+            await redis_client.incr(f"email:verification:{user_data.user_id}:attempts")
             raise IncorrectCodeError()
         except RedisError as e:
             raise RedisStorageError("Error with incrementing verify attempts in redis.") from e
@@ -216,6 +231,12 @@ async def refresh_tokens_service(
         raise InvalidTokenError()
     
     if refresh_token.is_revoked:
+        await queue.enqueue(
+            "send_mail_suspicious_activity",
+            email=user.email,
+            ip_address=user_info.ip_address,
+            user_agent=user_info.user_agent
+        )
         raise RefreshTokenRevokedError()
 
     try:
@@ -278,3 +299,44 @@ async def revoke_tokens_service(
         raise RedisStorageError('Error with deleting key from redis.') from e
     
     return {'status': 'Logouted.'}
+
+
+async def change_password_or_email_request_service(
+    user: User,
+    redis_client: Redis,
+    *,
+    code_type: str,
+    task_name: str
+) -> dict[str, str | int]:
+    """Service for sending code for changing password or email"""
+    code = generate_code()
+
+    try:
+        await create_verification_keys(
+            user.id,
+            user.email,
+            code,
+            redis_client,
+            code_type=code_type,
+            task_name=task_name
+        )
+    except RedisError as e:
+        raise RedisStorageError('Error with creating verification keys in redis.') from e
+    
+    return {"status": "Code was been sent.", "user_id": user.id}
+
+
+async def change_password_confirm_service(
+    user: User,
+    db_session: AsyncSession,
+    redis_client: Redis
+) -> dict [str, str]:
+    pass
+
+
+async def change_email_confirm_serivce(
+    user: User,
+    db_session: AsyncSession,
+    redis_client: Redis
+) -> dict [str, str]:
+    pass

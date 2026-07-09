@@ -193,7 +193,7 @@ async def send_email(to: str, subject: str, body: str, message_type: str) -> Non
 async def send_verification_mail(to: str, code: str) -> None:
     """Sending verification mail"""
 
-    subject = f"Подтверждение регистрации в {APP_NAME}."
+    subject = f"Подтверждение регистрации/входа в {APP_NAME}."
     body = render_template(
         "verification.html",
         app_name=APP_NAME,
@@ -216,6 +216,19 @@ async def send_change_password_mail(to: str, code: str) -> None:
     await send_email(to, subject, body, "change_password")
 
 
+async def send_change_email_mail(to: str, code: str) -> None:
+    """Sending change email mail"""
+
+    subject=f'Смена почты в {APP_NAME}'
+    body = render_template(
+        "change_email.html",
+        app_name=APP_NAME,
+        code=code,
+        ttl_minutes=10
+    )
+    await send_email(to, subject, body, "change_email")
+
+
 async def send_password_change_notification(to: str, ip_address: str) -> None:
     """Sending notify about password change"""
 
@@ -228,13 +241,14 @@ async def send_password_change_notification(to: str, ip_address: str) -> None:
     await send_email(to, subject, body, "password_change_notification")
 
 
-async def send_suspicious_activity_notification(to: str, ip_address: str) -> None:
+async def send_suspicious_activity_notification(to: str, ip_address: str, user_agent: str) -> None:
     """Sending notify about suspicious activity"""
 
     subject = f"Подозрительная активность в вашем аккаунте {APP_NAME}"
     body = render_template(
         "suspicious_activity.html",
         app_name=APP_NAME,
-        ip_address=ip_address
+        ip_address=ip_address,
+        user_agent=user_agent
     )
     await send_email(to, subject, body, "suspicious_activity_notification")

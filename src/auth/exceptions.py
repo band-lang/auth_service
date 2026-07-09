@@ -81,7 +81,7 @@ class TooManyVerificationAttemptsError(AppException):
     error_type = "TOO MANY VERIFICATION ATTEMPTS ERROR"
 
     def __init__(self) -> None:
-        super().__init__(message="Too many incorrect attempts. Please try again later.")
+        super().__init__(message="Too many incorrect attempts. Please, request a new code.")
 
 
 class IncorrectCodeError(AppException):
