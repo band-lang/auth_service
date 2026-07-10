@@ -3,7 +3,13 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from src.auth.models import User
-from src.auth.schemas import UserCreateRequest, CreateTokensRequest, UserInfo
+from src.auth.schemas import (
+    UserCreateRequest,
+    CreateTokensRequest,
+    UserInfo,
+    ChangePasswordRequest,
+    ChangeEmailRequest
+)
 from src.auth.exceptions import (
     EmailAlreadyExistsError,
     UserNotFoundError,
@@ -23,9 +29,13 @@ from src.auth.queries import (
     get_refresh_tokens,
     get_refresh_token_by_hash
 )
-from src.auth.redis_helpers import create_verification_keys, create_tokens
-from src.auth.email_utils import generate_code
-from src.auth.utils import hash_password, verify_password, _DUMMY_HASH
+from src.auth.redis_helpers import (
+    create_verification_keys,
+    create_tokens,
+    delete_all_access_tokens_user
+)
+from src.auth.utils.email_utils import generate_code
+from src.auth.utils.security_utils import hash_password, verify_password, _DUMMY_HASH
 from src.logger import logger
 from src.workers.queue import queue
 
@@ -49,7 +59,14 @@ async def register_user_service(
                     await db_session.commit()
 
                 code = generate_code()
-                await create_verification_keys(existing_user.id, existing_user.email, code, redis_client)
+                await create_verification_keys(
+                    existing_user.id,
+                    existing_user.email,
+                    code,
+                    redis_client,
+                    code_type="verification",
+                    task_name='send_mail_verification'
+                )
             except SQLAlchemyError as e:
                 await db_session.rollback()
                 raise DatabaseError("An occured error with refreshing password in database.") from e
@@ -69,7 +86,7 @@ async def register_user_service(
             code,
             redis_client,
             code_type="verification",
-            task_name='send_mail_verification'
+            job_func_name='send_mail_verification'
         )
 
         await db_session.commit()
@@ -111,7 +128,7 @@ async def login_user_request_service(
             user.email, code,
             redis_client,
             code_type="verification",
-            task_name='send_mail_verification'
+            job_func_name='send_mail_verification'
         )
     except RedisError as e:
         raise RedisStorageError("Error with creating verification keys in redis.") from e
@@ -136,10 +153,15 @@ async def create_tokens_service(
         raise UserNotFoundError()
     
     try:
-        verif_code_redis = await redis_client.get(f"email:verification:{user_data.user_id}:code")
-        verif_attempts_redis = await redis_client.get(f"email:verification:{user_data.user_id}:attempts")
+        async with redis_client.pipeline(transaction=True) as pipe:
+            pipe.get(f"email:verification:{user_data.user_id}:code")
+            pipe.get(f"email:verification:{user_data.user_id}:attempts")
+            result = await pipe.execute()
     except RedisError as e:
         raise RedisStorageError("Error with getting verif user code or attempts from redis.") from e
+
+    verif_code_redis = result[0]
+    verif_attempts_redis = result[1]
 
     if not verif_code_redis:
         raise CodeNotFoundError()
@@ -174,14 +196,13 @@ async def create_tokens_service(
 
             if not user.is_verified:
                 user.is_verified = True
-
             await db_session.commit()
         except SQLAlchemyError as e:
             await db_session.rollback()
 
             try:
-                await redis_client.delete(f'access_token:{tokens['access_token']}')
-                await redis_client.delete(f'user_session:{user.id}')
+                await redis_client.delete(f"access_token:{tokens['access_token']}")
+                await redis_client.delete(f'user_sessions:{user.id}')
             except RedisError as e:
                 logger.exception(
                     msg='error with deleting tokens from redis',
@@ -240,10 +261,8 @@ async def refresh_tokens_service(
         raise RefreshTokenRevokedError()
 
     try:
-        refresh_tokens = await get_refresh_tokens(user.id, db_session)
-
-        for refresh_token in refresh_tokens:
-            refresh_token.is_revoked = True
+        refresh_token.is_revoked = True
+        await db_session.commit()
 
         tokens = await create_tokens(
             db_session,
@@ -253,13 +272,12 @@ async def refresh_tokens_service(
             user_info.user_agent
         )
 
-        await db_session.commit()
     except SQLAlchemyError as e:
         await db_session.rollback()
 
         try:
             await redis_client.delete(f"access_token:{tokens['access_token']}")
-            await redis_client.delete(f'user_session:{user.id}')
+            await redis_client.delete(f'user_sessions:{user.id}')
         except RedisError as e:
             logger.exception(
                 msg='error with deleting tokens from redis',
@@ -306,7 +324,7 @@ async def change_password_or_email_request_service(
     redis_client: Redis,
     *,
     code_type: str,
-    task_name: str
+    job_func_name: str
 ) -> dict[str, str | int]:
     """Service for sending code for changing password or email"""
     code = generate_code()
@@ -318,7 +336,7 @@ async def change_password_or_email_request_service(
             code,
             redis_client,
             code_type=code_type,
-            task_name=task_name
+            job_func_name=job_func_name
         )
     except RedisError as e:
         raise RedisStorageError('Error with creating verification keys in redis.') from e
@@ -327,16 +345,155 @@ async def change_password_or_email_request_service(
 
 
 async def change_password_confirm_service(
+    user_data: ChangePasswordRequest,
     user: User,
     db_session: AsyncSession,
     redis_client: Redis
-) -> dict [str, str]:
-    pass
+) -> dict[str, str]:
+    """Service for confirming password changing."""
+
+    try:
+        async with redis_client.pipeline(transaction=True) as pipe:
+            pipe.get(f"email:password_reset:{user.id}:code")
+            pipe.get(f"email:password_reset:{user.id}:attempts")
+            result = await pipe.execute()
+    except RedisError as e:
+        raise RedisStorageError("Error with getting password reset keys from redis") from e
+    
+    verif_code_redis = result[0]
+    verif_attempts_redis = result[1]
+
+    if not verif_code_redis:
+        raise CodeNotFoundError()
+    
+    if not verif_attempts_redis:
+        logger.error(
+            "Attempts key not found, but code key exists",
+            user_id=user_data.user_id
+        )
+        raise RedisStorageError("Error with getting key with attempts counter from redis.")
+    
+    if int(verif_attempts_redis) >= 5:
+        try:
+            await redis_client.delete(f"email:password_reset:{user.id}:code")
+            await redis_client.delete(f"email:password_reset:{user.id}:attempts")
+        except RedisError as e:
+            logger.exception(
+                msg='error with deleting password reset keys from redis',
+                error=str(e)
+            )
+
+        raise TooManyVerificationAttemptsError()
+    
+    if verif_code_redis == user_data.code:
+        try:
+            hashed_password = hash_password(user_data.new_password.get_secret_value())
+            user.password_hash = hashed_password
+            refresh_tokens = await get_refresh_tokens(user.id, db_session)
+
+            for token in refresh_tokens:
+                token.is_revoked = True
+
+            await db_session.commit()
+
+            await delete_all_access_tokens_user(user.id, redis_client)
+            
+            return {"status": "Password successfully changed"}
+        except SQLAlchemyError as e:
+            await db_session.rollback()
+            raise SQLAlchemyError("Error with changing password of user in database.") from e
+        except RedisError as e:
+            raise RedisStorageError("An occured error with redis in change_password_confirm_serivce") from e
+    
+    try:
+        await redis_client.delete(f'email:password_reset:{user.id}:attempts')
+        await redis_client.delete(f'email:password_reset:{user.id}:code')
+    except RedisError as e:
+        logger.exception(
+            msg='error with deleting password reset keys.',
+            error=str(e)
+        )
+    
+    else:
+        try:
+            await redis_client.incr(f"email:password_reset:{user.id}:attempts")
+            raise IncorrectCodeError()
+        except RedisError as e:
+            raise RedisStorageError("Error with incrementing verify attempts in redis.") from e
 
 
-async def change_email_confirm_serivce(
+async def change_email_confirm_service(
+    user_data: ChangeEmailRequest,
     user: User,
     db_session: AsyncSession,
     redis_client: Redis
-) -> dict [str, str]:
-    pass
+) -> dict[str, str]:
+    """Service for confirming email or password changing."""
+
+    try:
+        async with redis_client.pipeline(transaction=True) as pipe:
+            pipe.get(f"email:change_email:{user.id}:code")
+            pipe.get(f"email:change_email:{user.id}:attempts")
+            result = await pipe.execute()
+    except RedisError as e:
+        raise RedisStorageError(f"Error with getting keys from redis") from e
+    
+    verif_code_redis = result[0]
+    verif_attempts_redis = result[1]
+
+    if not verif_code_redis:
+        raise CodeNotFoundError()
+    
+    if not verif_attempts_redis:
+        logger.error(
+            "Attempts key not found, but code key exists",
+            user_id=user_data.user_id
+        )
+        raise RedisStorageError("Error with getting key with attempts counter from redis.")
+    
+    if int(verif_attempts_redis) >= 5:
+        try:
+            await redis_client.delete(f"email:change_email:{user.id}:code")
+            await redis_client.delete(f"email:change_email:{user.id}:attempts")
+        except RedisError as e:
+            logger.exception(
+                msg='error with deleting password reset keys from redis',
+                error=str(e)
+            )
+
+        raise TooManyVerificationAttemptsError()
+    
+    if verif_code_redis == user_data.code:
+        try:
+            user.email = user_data.new_email
+            refresh_tokens = await get_refresh_tokens(user.id, db_session)
+
+            for token in refresh_tokens:
+                token.is_revoked = True
+
+            await db_session.commit()
+
+            await delete_all_access_tokens_user(user.id, redis_client)
+            
+            return {"status": "Email successfully changed"}
+        except SQLAlchemyError as e:
+            await db_session.rollback()
+            raise SQLAlchemyError("Error with changing email of user in database.") from e
+        except RedisError as e:
+            raise RedisStorageError("An occured error with redis in change_email_confirm_serivce") from e
+    
+    try:
+        await redis_client.delete(f'email:change_email:{user.id}:attempts')
+        await redis_client.delete(f'email:change_email:{user.id}:code')
+    except RedisError as e:
+        logger.exception(
+            msg='error with deleting email reset keys.',
+            error=str(e)
+        )
+    
+    else:
+        try:
+            await redis_client.incr(f"email:email_change:{user.id}:attempts")
+            raise IncorrectCodeError()
+        except RedisError as e:
+            raise RedisStorageError("Error with incrementing verify attempts in redis.") from e

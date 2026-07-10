@@ -5,8 +5,13 @@ from redis.asyncio import Redis
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from src.auth import router as auth_router
 from src.config import REDIS_HOST, REDIS_PORT, REDIS_MAX_CONNECTIONS
-from src.auth.exceptions import app_exception_handler, AppException
-from src.exceptions import DatabaseException, database_errors_handler
+from src.auth.exceptions import app_exception_handler, internal_server_exception_handler
+from src.exceptions import (
+    DatabaseException,
+    database_errors_handler,
+    AppException,
+    InternalServerException
+)
 
 
 @asynccontextmanager
@@ -34,6 +39,7 @@ app = FastAPI(
 
 app.add_exception_handler(AppException, app_exception_handler) # type: ignore[arg-type]
 app.add_exception_handler(DatabaseException, database_errors_handler) # type: ignore[arg-type]
+app.add_exception_handler(InternalServerException, internal_server_exception_handler)
 
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
 

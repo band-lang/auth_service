@@ -1,6 +1,19 @@
+from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from src.logger import logger
+
+
+# Base internal server exception
+class InternalServerException(Exception):
+    """Internal server errors base exception"""
+    status_code = 500
+    error_type = 'INTERNAL SERVER ERROR'
+
+    def __init__(self, message: str, **extra: Any) -> None:
+        super().__init__(message)
+        self.message = message
+        self.extra = extra
 
 
 #Base app custom exception

@@ -15,7 +15,7 @@ async def create_verification_keys(
     redis_client: Redis,
     *,
     code_type: str,
-    task_name: str
+    job_func_name: str
 ) -> None:
     """Saves the code to Redis and queues a task to send an email."""
 
@@ -28,7 +28,7 @@ async def create_verification_keys(
 
     # Task in SAQ
     await queue.enqueue(
-        task_name,
+        job_func_name,
         email=email,
         code=code,
         timeout=30,
@@ -64,3 +64,19 @@ async def create_tokens(
     await create_refresh_token(hashed_refresh_token, user_id, user_agent, ip_address, db_session)
     
     return {"access_token": access_token, "refresh_token": refresh_token}
+
+
+async def delete_all_access_tokens_user(
+    user_id: int,
+    redis_client: Redis   
+) -> None:
+    tokens = await redis_client.smembers(f"user_sessions:{user_id}")
+
+    if not tokens:
+        return
+    
+    async with redis_client.pipeline(transaction=True) as pipe:
+        for token in tokens:
+            pipe.delete(f"access_token:{token}")
+        pipe.delete(f"user_sessions:{user_id}")
+        await pipe.execute()

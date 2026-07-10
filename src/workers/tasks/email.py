@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Callable, Any
 from saq.types import Context
 from src.logger import logger
-from src.auth.email_utils import (
+from src.auth.utils.email_utils import (
     send_verification_mail,
     send_change_password_mail,
     send_change_email_mail,

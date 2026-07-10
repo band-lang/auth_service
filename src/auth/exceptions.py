@@ -1,6 +1,7 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from src.exceptions import AppException
+from src.exceptions import AppException, InternalServerException
+from src.logger import logger
 
 
 #Email custom exceptions
@@ -114,6 +115,14 @@ class IncorrectPasswordError(BaseUserException):
         super().__init__(message="You entered incorrect password.")
 
 
+class PasswordNotChangedError(BaseUserException):
+    status_code = 409
+    error_type = 'PASSWORD CHANGING ERROR'
+
+    def __init__(self) -> None:
+        super().__init__(message='You entered your previous password.')
+
+
 class UserNotFoundError(BaseUserException):
     status_code = 404
     error_type = 'USER NOT FOUND ERROR'
@@ -169,7 +178,19 @@ class RefreshTokenRevokedError(BaseTokenException):
 
     def __init__(self) -> None:
         super().__init__(message='Refresh token revoked.')
-        
+
+
+# Internal server exceptions
+class InvalidFieldNameError(InternalServerException):
+    error_type = 'INVALID FIELD NAME ERROR'
+
+    def __init__(self, transfered_field_name: str, allowed_fields: set[str]) -> None:
+        super().__init__(
+            message='Internal server error.',
+            transfered_field_name=transfered_field_name,
+            allowed_fields=allowed_fields
+        )
+
 
 #Handler
 def app_exception_handler(
@@ -179,4 +200,20 @@ def app_exception_handler(
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": exc.error_type, "message": exc.message}
+    )
+
+
+def internal_server_exception_handler(
+    request: Request,
+    exc: InternalServerException
+) -> JSONResponse:
+    logger.exception(
+        msg='internal_server_error',
+        error_type=exc.error_type,
+        **exc.extra
+    )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={'error': exc.error_type, 'message': exc.message}
     )

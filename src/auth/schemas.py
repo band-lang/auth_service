@@ -22,6 +22,16 @@ class RefreshTokensRequest(BaseModel):
     refresh_token: str
 
 
+class ChangePasswordRequest(BaseModel):
+    new_password: Annotated[SecretStr, Field(min_length=8, max_length=256, examples=[">_BlSBz<PwG@]i0"])]
+    code: str = Field(min_length=8, max_length=8, json_schema_extra={"example": "12345678"})
+
+
+class ChangeEmailRequest(BaseModel):
+    new_email: EmailStr
+    code: str = Field(min_length=8, max_length=8, json_schema_extra={"example": "12345678"})
+
+
 class UserInfo(BaseModel):
     user_agent: str | None
     ip_address: str | None

@@ -8,7 +8,9 @@ from src.auth.schemas import (
     CreateTokensRequest,
     CreateTokensResponse,
     UserInfo,
-    RefreshTokensRequest
+    RefreshTokensRequest,
+    ChangePasswordRequest,
+    ChangeEmailRequest
 )
 from src.database import get_db
 from src.auth.dependencies import (
@@ -17,13 +19,19 @@ from src.auth.dependencies import (
     get_active_user,
     get_user_without_suspicious_check
 )
-from src.auth.service import (
+from src.auth.services.registration_service import (
     register_user_service,
-    login_user_request_service,
     create_tokens_service,
+    login_user_request_service
+)
+from src.auth.services.tokens_service import (
     refresh_tokens_service,
-    revoke_tokens_service,
-    change_password_or_email_request_service
+    revoke_tokens_service
+)
+from src.auth.services.credentials_service import (
+    change_password_or_email_request_service,
+    change_password_confirm_service,
+    change_email_confirm_service
 )
 
 
@@ -108,7 +116,22 @@ async def reset_password_request_router(
         user,
         redis_client,
         code_type="password_reset",
-        task_name="send_mail_change_password"
+        job_func_name="send_mail_change_password"
+    )
+
+
+@router.patch('/password/reset/confirm')
+async def reset_password_confirm_router(
+    user_data: ChangePasswordRequest,
+    user: User = Depends(get_user_without_suspicious_check),
+    db_session: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis)
+) -> dict[str, str]:
+    return await change_password_confirm_service(
+        user=user,
+        user_data=user_data,
+        db_session=db_session,
+        redis_client=redis_client
     )
 
 
@@ -121,5 +144,20 @@ async def change_email_request_router(
         user,
         redis_client,
         code_type="change_email",
-        task_name="send_mail_change_email"
+        job_func_name="send_mail_change_email"
+    )
+
+
+@router.patch('/email/change/confirm')
+async def change_email_confirm_router(
+    user_data: ChangeEmailRequest,
+    user: User = Depends(get_user_without_suspicious_check),
+    db_session: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis)
+) -> dict[str, str]:
+    return await change_email_confirm_service(
+        user=user,
+        user_data=user_data,
+        db_session=db_session,
+        redis_client=redis_client
     )

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.auth.models import User, RefreshToken
 from src.auth.schemas import UserCreateRequest
-from src.auth.utils import hash_password
+from src.auth.utils.security_utils import hash_password
 from src.config import REFRESH_TOKEN_EXPIRE_DAYS
 
 
