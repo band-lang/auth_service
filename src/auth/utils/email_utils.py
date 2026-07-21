@@ -35,7 +35,7 @@ from src.auth.exceptions import (
 
 
 #Jinja2 settings, not ideal, check that
-TEMPLATES_DIR = Path(__file__).parent / "templates" / "email"
+TEMPLATES_DIR = Path(__file__).parent.parent / "templates" / "email"
 jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
 
 

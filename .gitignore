@@ -1,25 +1,38 @@
-#Secrets
+# Secrets
 .env
+.env.*
+!.env.example
 
-
-#Venv
+# Virtual environments
 venv/
 .venv/
+env/
 
-
-#Python cache
+# Python cache / build artifacts
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
 
-
-#IDE
+# IDE
 .vscode/
 .idea/
 
-
-#Template files
+# Local database / sqlite artifacts
 *.sqlite3
 *.db
 
-#Logs
+# Logs
 /logs
+*.log
+
+# Test / coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS files
+.DS_Store
+Thumbs.db

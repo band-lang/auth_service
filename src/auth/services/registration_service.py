@@ -52,7 +52,7 @@ async def register_user_service(
                     code,
                     redis_client,
                     code_type="verification",
-                    task_name='send_mail_verification'
+                    job_func_name='send_mail_verification'
                 )
             except SQLAlchemyError as e:
                 await db_session.rollback()
