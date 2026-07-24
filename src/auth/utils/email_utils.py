@@ -2,7 +2,7 @@ import asyncio
 import random
 from typing import Any
 from pathlib import Path
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from email.mime.text import MIMEText
 from aiosmtplib import SMTP
 from aiosmtplib.errors import (
@@ -36,7 +36,10 @@ from src.auth.exceptions import (
 
 #Jinja2 settings, not ideal, check that
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates" / "email"
-jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+jinja_env = Environment(
+    loader=FileSystemLoader(str(TEMPLATES_DIR)),
+    autoescape=select_autoescape(['html', 'xml'])
+)
 
 
 def render_template(template_name: str, **kwargs: Any) -> str:
