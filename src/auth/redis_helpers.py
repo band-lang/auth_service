@@ -37,6 +37,44 @@ async def create_verification_keys(
     )
 
 
+async def create_change_email_keys(
+    user_id: int,
+    old_email: str,
+    new_email: str,
+    old_code: str,
+    new_code: str,
+    redis_client: Redis
+) -> None:
+    """Saves both codes and the new email to Redis, queues two email tasks."""
+    async with redis_client.pipeline(transaction=True) as pipe:
+        pipe.setex(name=f"email:change_email_old:{user_id}:code", time=600, value=old_code)
+        pipe.setex(name=f"email:change_email_old:{user_id}:attempts", time=600, value="1")
+
+        pipe.setex(name=f"email:change_email_new:{user_id}:code", time=600, value=new_code)
+        pipe.setex(name=f"email:change_email_new:{user_id}:attempts", time=600, value="1")
+
+        pipe.setex(name=f"email:change_email_pending_address:{user_id}", time=600, value=new_email)
+        await pipe.execute()
+
+    await queue.enqueue(
+        "send_mail_change_email",
+        email=old_email,
+        code=old_code,
+        timeout=30,
+        retries=3,
+        retry_delay=2.0
+    )
+
+    await queue.enqueue(
+        "send_mail_change_email",
+        email=new_email,
+        code=new_code,
+        timeout=30,
+        retries=3,
+        retry_delay=2.0
+    )
+
+
 async def create_tokens(
     db_session: AsyncSession,
     redis_client: Redis,

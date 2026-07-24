@@ -10,7 +10,8 @@ from src.auth.schemas import (
     UserInfo,
     RefreshTokensRequest,
     ChangePasswordRequest,
-    ChangeEmailRequest
+    ChangeEmailRequest,
+    ChangeEmailInitRequest
 )
 from src.database import get_db
 from src.auth.dependencies import (
@@ -30,6 +31,7 @@ from src.auth.services.tokens_service import (
 )
 from src.auth.services.credentials_service import (
     change_password_or_email_request_service,
+    change_email_request_service,
     change_password_confirm_service,
     change_email_confirm_service
 )
@@ -137,14 +139,14 @@ async def reset_password_confirm_router(
 
 @router.post('/email/change')
 async def change_email_request_router(
+    user_data: ChangeEmailInitRequest,
     user: User = Depends(get_user_without_suspicious_check),
     redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str | int]:
-    return await change_password_or_email_request_service(
-        user,
-        redis_client,
-        code_type="change_email",
-        job_func_name="send_mail_change_email"
+    return await change_email_request_service(
+        user=user,
+        new_email=user_data.new_email,
+        redis_client=redis_client
     )
 
 

@@ -5,12 +5,12 @@ from src.auth.models import User
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from src.exceptions import RedisStorageError, DatabaseError
-from src.auth.exceptions import InvalidFieldNameError, PasswordNotChangedError
-from src.auth.redis_helpers import create_verification_keys, delete_all_access_tokens_user
+from src.auth.exceptions import InvalidFieldNameError, PasswordNotChangedError, CodeNotFoundError
+from src.auth.redis_helpers import create_verification_keys, create_change_email_keys, delete_all_access_tokens_user
 from src.auth.services.verification_code_serivce import _verify_code
 from src.auth.utils.email_utils import generate_code
 from src.auth.utils.security_utils import hash_password, verify_password
-from src.auth.schemas import ChangePasswordRequest, ChangeEmailRequest
+from src.auth.schemas import ChangePasswordRequest, ChangeEmailRequest, ChangeEmailInitRequest
 from src.auth.constants import ALLOWED_UPDATE_FIELD_NAMES
 
 
@@ -21,7 +21,7 @@ async def change_password_or_email_request_service(
     code_type: str,
     job_func_name: str
 ) -> dict[str, str | int]:
-    """Service for sending code for changing password or email"""
+    """Service for sending code for changing password"""
     code = generate_code()
 
     try:
@@ -37,6 +37,33 @@ async def change_password_or_email_request_service(
         raise RedisStorageError('Error with creating verification keys in redis.') from e
     
     return {"status": "Code was been sent.", "user_id": user.id}
+
+
+async def change_email_request_service(
+    user: User,
+    new_email: str,
+    redis_client: Redis
+) -> dict[str, str | int]:
+    """Service for sending two codes for changing email"""
+    if user.email == new_email:
+        return {"status": "New email is the same as the current email.", "user_id": user.id}
+
+    old_code = generate_code()
+    new_code = generate_code()
+
+    try:
+        await create_change_email_keys(
+            user_id=user.id,
+            old_email=user.email,
+            new_email=new_email,
+            old_code=old_code,
+            new_code=new_code,
+            redis_client=redis_client
+        )
+    except RedisError as e:
+        raise RedisStorageError('Error with creating change email keys in redis.') from e
+
+    return {"status": "Codes were sent to both emails.", "user_id": user.id}
 
 
 async def _confirm_and_update_user_field(
@@ -131,13 +158,53 @@ async def change_email_confirm_service(
     db_session: AsyncSession,
     redis_client: Redis
 ) -> dict[str, str]:
-    return await _confirm_and_update_user_field(
-        user=user,
-        db_session=db_session,
-        redis_client=redis_client,
-        code_type="change_email",
-        inputed_code=user_data.code,
-        update_field_name='email',
-        new_value=user_data.email,
-        output_value={'status': 'Email was been successfully reseted.'}
+
+    # 1. Check old email code
+    await _verify_code(
+        code_type="change_email_old",
+        inputed_code=user_data.old_email_code,
+        user_id=user.id,
+        redis_client=redis_client
     )
+
+    # 2. Check new email code
+    await _verify_code(
+        code_type="change_email_new",
+        inputed_code=user_data.new_email_code,
+        user_id=user.id,
+        redis_client=redis_client
+    )
+
+    # 3. Retrieve the pending new email address
+    try:
+        pending_email = await redis_client.get(f"email:change_email_pending_address:{user.id}")
+        if not pending_email:
+            raise CodeNotFoundError()
+        pending_email = pending_email.decode('utf-8') if isinstance(pending_email, bytes) else pending_email
+    except RedisError as e:
+        raise RedisStorageError('Error retrieving pending email address') from e
+
+    # We manually update the user here instead of using _confirm_and_update_user_field
+    # since we already verified the codes.
+    try:
+        user.email = pending_email
+
+        refresh_tokens = await get_refresh_tokens(user_id=user.id, db_session=db_session)
+        if refresh_tokens:
+            for token in refresh_tokens:
+                token.is_revoked = True
+
+        await delete_all_access_tokens_user(
+            user_id=user.id,
+            redis_client=redis_client
+        )
+
+        await db_session.commit()
+    except SQLAlchemyError as e:
+        await db_session.rollback()
+        raise DatabaseError('Error with changing value in database.') from e
+    except RedisError as e:
+        await db_session.rollback()
+        raise RedisStorageError('Error with deleting access tokens from redis.') from e
+
+    return {'status': 'Email was been successfully reseted.'}
