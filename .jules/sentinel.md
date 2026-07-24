@@ -1,0 +1,4 @@
+## 2024-05-18 - Jinja2 Email Template HTML Injection / XSS
+**Vulnerability:** The Jinja2 environment in `src/auth/utils/email_utils.py` was initialized without `autoescape=True`. User-controlled inputs, such as the `User-Agent` header passed to `suspicious_activity.html`, were rendered directly into the email body without HTML escaping, creating a Cross-Site Scripting (XSS) / HTML Injection vulnerability in transactional emails.
+**Learning:** Default Jinja2 environments do not automatically escape HTML unless specifically configured. In email systems, where user inputs like `User-Agent` or `IP-Address` are logged or sent to users, failure to escape can lead to phishing attacks or execution of malicious scripts within the email client.
+**Prevention:** Always initialize Jinja2 environments with `autoescape=select_autoescape(['html', 'xml'])` when generating HTML emails to ensure all variables are automatically escaped.
