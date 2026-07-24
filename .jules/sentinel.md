@@ -7,3 +7,8 @@
 **Vulnerability:** The email change flow (at `/auth/email/change`) only verified ownership of the existing email account. It did not require verification of the new email address being set. This allowed the possibility of typos locking users out or session hijackers assigning an email they couldn't verify.
 **Learning:** Any operation that transfers or changes core identity credentials (like email addresses or phone numbers) must require mutual verification. The old credential must authorize the transfer, and the new credential must verify ownership.
 **Prevention:** Implement a "two-code" verification flow. When an email change is requested, generate two separate codes and send one to the old email and one to the new email. Only change the email in the database if both codes are confirmed.
+
+## 2024-05-18 - Lack of Rate Limiting on Authentication Endpoints
+**Vulnerability:** The endpoints for registration, login, password resets, and email changes were lacking rate limiting. Without constraints, an attacker could attempt to brute-force authentication, guess OTP codes, or execute email bombing/spam attacks by repeatedly calling these endpoints.
+**Learning:** Authentication APIs are inherently sensitive and are common targets for automated attacks. Every endpoint that sends an email, generates an OTP, or accepts a password must have a strict rate limit associated with it to mitigate automated abuse.
+**Prevention:** Introduced the `fastapi-limiter` library. Initialized `FastAPILimiter` globally with the app's async Redis client, and added `Depends(RateLimiter(...))` to all sensitive routes. Used shorter, higher capacity limits for routine operations (login: 5/min) and longer, stricter limits for sensitive recovery flows (password reset: 3/hour).

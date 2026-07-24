@@ -13,6 +13,7 @@ from src.auth.schemas import (
     ChangeEmailRequest,
     ChangeEmailInitRequest
 )
+from fastapi_limiter.depends import RateLimiter
 from src.database import get_db
 from src.auth.dependencies import (
     get_redis,
@@ -30,7 +31,7 @@ from src.auth.services.tokens_service import (
     revoke_tokens_service
 )
 from src.auth.services.credentials_service import (
-    change_password_request_service,
+    change_password_or_email_request_service,
     change_email_request_service,
     change_password_confirm_service,
     change_email_confirm_service
@@ -53,7 +54,7 @@ def protected_router(
     return {'status': 'Success!'}
 
 
-@router.post('/users')
+@router.post('/users', dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def register_user_router(
     user_data: UserCreateRequest,
     db_session: AsyncSession = Depends(get_db),
@@ -63,7 +64,7 @@ async def register_user_router(
 
 
 # Use the same schema as in the registration endpoint, because the fields are the same.
-@router.post('/login/request')
+@router.post('/login/request', dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def login_user_request_router(
     user_data: UserCreateRequest,
     db_session: AsyncSession = Depends(get_db),
@@ -109,12 +110,12 @@ async def revoke_tokens_router(
     return await revoke_tokens_service(access_token.credentials, inputed_refresh_token.refresh_token, db_session, redis_client)
 
 
-@router.post('/password/reset')
+@router.post('/password/reset', dependencies=[Depends(RateLimiter(times=3, seconds=3600))])
 async def reset_password_request_router(
     user: User = Depends(get_user_without_suspicious_check),
     redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str | int]:
-    return await change_password_request_service(
+    return await change_password_or_email_request_service(
         user,
         redis_client,
         code_type="password_reset",
@@ -137,7 +138,7 @@ async def reset_password_confirm_router(
     )
 
 
-@router.post('/email/change')
+@router.post('/email/change', dependencies=[Depends(RateLimiter(times=3, seconds=3600))])
 async def change_email_request_router(
     user_data: ChangeEmailInitRequest,
     user: User = Depends(get_user_without_suspicious_check),

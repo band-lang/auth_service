@@ -35,3 +35,6 @@ qrcode[pil]==8.2
 
 #Logging
 structlog==26.1.0
+
+# Rate Limiting
+fastapi-limiter==0.1.6

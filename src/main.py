@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from redis.asyncio import Redis
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+from fastapi_limiter import FastAPILimiter
 from src.auth import router as auth_router
 from src.config import REDIS_HOST, REDIS_PORT, REDIS_MAX_CONNECTIONS
 from src.auth.exceptions import app_exception_handler, internal_server_exception_handler
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
 
     await app.state.redis.ping()
+    await FastAPILimiter.init(app.state.redis)
 
     yield
 
