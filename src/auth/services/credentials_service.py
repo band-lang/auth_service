@@ -66,38 +66,17 @@ async def change_email_request_service(
     return {"status": "Codes were sent to both emails.", "user_id": user.id}
 
 
-async def _confirm_and_update_user_field(
+async def _update_user_field_and_revoke_tokens(
     user: User,
     db_session: AsyncSession,
     redis_client: Redis,
     *,
-    code_type: str,
-    inputed_code: str,
     update_field_name: str,
     new_value: str,
     output_value: dict[str, str]
 ) -> dict[str, str]:
-    """Update user field.
-
-    Args:
-        user: object of model user.
-        redis_client: object of class redis_client for work with redis connection.
-        code_type: type of code, needs for redis.
-        inputed_code: entered code by the user.
-        update_field_name: the name of the field to be updated.
-        new_value: value for update field.
-        output_value: value for output, example - {"status": "Password was successfully reseted."}
-
-    Return:
-        dict with type of key string, type of value string.
-
-    """
-    await _verify_code(
-        code_type=code_type,
-        inputed_code=inputed_code,
-        user_id=user.id,
-        redis_client=redis_client
-    )
+    """Universal helper to update a user field, revoke tokens, and commit to DB.
+    Does not handle verification logic."""
 
     if update_field_name not in ALLOWED_UPDATE_FIELD_NAMES:
         raise InvalidFieldNameError(
@@ -135,17 +114,23 @@ async def change_password_confirm_service(
     db_session: AsyncSession,
     redis_client: Redis
 ) -> dict[str, str]:
+
+    await _verify_code(
+        code_type="password_reset",
+        inputed_code=user_data.code,
+        user_id=user.id,
+        redis_client=redis_client
+    )
+
     hashed_password = hash_password(user_data.new_password.get_secret_value())
 
     if verify_password(user.password_hash, user_data.new_password.get_secret_value()):
         raise PasswordNotChangedError()
 
-    return await _confirm_and_update_user_field(
+    return await _update_user_field_and_revoke_tokens(
         user=user,
         db_session=db_session,
         redis_client=redis_client,
-        code_type="password_reset",
-        inputed_code=user_data.code,
         update_field_name='password_hash',
         new_value=hashed_password,
         output_value={'status': 'Password was been successfully reseted.'}
@@ -159,7 +144,6 @@ async def change_email_confirm_service(
     redis_client: Redis
 ) -> dict[str, str]:
 
-    # 1. Check old email code
     await _verify_code(
         code_type="change_email_old",
         inputed_code=user_data.old_email_code,
@@ -167,7 +151,6 @@ async def change_email_confirm_service(
         redis_client=redis_client
     )
 
-    # 2. Check new email code
     await _verify_code(
         code_type="change_email_new",
         inputed_code=user_data.new_email_code,
@@ -175,7 +158,6 @@ async def change_email_confirm_service(
         redis_client=redis_client
     )
 
-    # 3. Retrieve the pending new email address
     try:
         pending_email = await redis_client.get(f"email:change_email_pending_address:{user.id}")
         if not pending_email:
@@ -184,27 +166,11 @@ async def change_email_confirm_service(
     except RedisError as e:
         raise RedisStorageError('Error retrieving pending email address') from e
 
-    # We manually update the user here instead of using _confirm_and_update_user_field
-    # since we already verified the codes.
-    try:
-        user.email = pending_email
-
-        refresh_tokens = await get_refresh_tokens(user_id=user.id, db_session=db_session)
-        if refresh_tokens:
-            for token in refresh_tokens:
-                token.is_revoked = True
-
-        await delete_all_access_tokens_user(
-            user_id=user.id,
-            redis_client=redis_client
-        )
-
-        await db_session.commit()
-    except SQLAlchemyError as e:
-        await db_session.rollback()
-        raise DatabaseError('Error with changing value in database.') from e
-    except RedisError as e:
-        await db_session.rollback()
-        raise RedisStorageError('Error with deleting access tokens from redis.') from e
-
-    return {'status': 'Email was been successfully reseted.'}
+    return await _update_user_field_and_revoke_tokens(
+        user=user,
+        db_session=db_session,
+        redis_client=redis_client,
+        update_field_name='email',
+        new_value=pending_email,
+        output_value={'status': 'Email was been successfully reseted.'}
+    )
