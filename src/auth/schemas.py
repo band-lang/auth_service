@@ -27,9 +27,13 @@ class ChangePasswordRequest(BaseModel):
     code: str = Field(min_length=8, max_length=8, json_schema_extra={"example": "12345678"})
 
 
-class ChangeEmailRequest(BaseModel):
+class ChangeEmailInitRequest(BaseModel):
     new_email: EmailStr
-    code: str = Field(min_length=8, max_length=8, json_schema_extra={"example": "12345678"})
+
+
+class ChangeEmailRequest(BaseModel):
+    old_email_code: str = Field(min_length=8, max_length=8, json_schema_extra={"example": "12345678"})
+    new_email_code: str = Field(min_length=8, max_length=8, json_schema_extra={"example": "12345678"})
 
 
 class UserInfo(BaseModel):
