@@ -30,7 +30,7 @@ from src.auth.services.tokens_service import (
     revoke_tokens_service
 )
 from src.auth.services.credentials_service import (
-    change_password_or_email_request_service,
+    change_password_request_service,
     change_email_request_service,
     change_password_confirm_service,
     change_email_confirm_service
@@ -114,7 +114,7 @@ async def reset_password_request_router(
     user: User = Depends(get_user_without_suspicious_check),
     redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str | int]:
-    return await change_password_or_email_request_service(
+    return await change_password_request_service(
         user,
         redis_client,
         code_type="password_reset",

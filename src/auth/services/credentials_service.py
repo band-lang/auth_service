@@ -10,11 +10,11 @@ from src.auth.redis_helpers import create_verification_keys, create_change_email
 from src.auth.services.verification_code_serivce import _verify_code
 from src.auth.utils.email_utils import generate_code
 from src.auth.utils.security_utils import hash_password, verify_password
-from src.auth.schemas import ChangePasswordRequest, ChangeEmailRequest, ChangeEmailInitRequest
+from src.auth.schemas import ChangePasswordRequest, ChangeEmailRequest
 from src.auth.constants import ALLOWED_UPDATE_FIELD_NAMES
 
 
-async def change_password_or_email_request_service(
+async def change_password_request_service(
     user: User,
     redis_client: Redis,
     *,
@@ -36,7 +36,7 @@ async def change_password_or_email_request_service(
     except RedisError as e:
         raise RedisStorageError('Error with creating verification keys in redis.') from e
     
-    return {"status": "Code was been sent.", "user_id": user.id}
+    return {"status": "Code for changing password was been sent.", "user_id": user.id}
 
 
 async def change_email_request_service(
@@ -46,7 +46,8 @@ async def change_email_request_service(
 ) -> dict[str, str | int]:
     """Service for sending two codes for changing email"""
     if user.email == new_email:
-        return {"status": "New email is the same as the current email.", "user_id": user.id}
+        # Change this on custom exception
+        return {"status": "New email is the same as the current email."}
 
     old_code = generate_code()
     new_code = generate_code()
