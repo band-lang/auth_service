@@ -10,11 +10,11 @@ from src.auth.redis_helpers import create_verification_keys, create_change_email
 from src.auth.services.verification_code_serivce import _verify_code
 from src.auth.utils.email_utils import generate_code
 from src.auth.utils.security_utils import hash_password, verify_password
-from src.auth.schemas import ChangePasswordRequest, ChangeEmailRequest, ChangeEmailInitRequest
+from src.auth.schemas import ChangePasswordRequest, ChangeEmailRequest
 from src.auth.constants import ALLOWED_UPDATE_FIELD_NAMES
 
 
-async def change_password_or_email_request_service(
+async def change_password_request_service(
     user: User,
     redis_client: Redis,
     *,
