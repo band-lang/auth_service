@@ -1,5 +1,5 @@
 import asyncio
-import random
+import secrets
 from typing import Any
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -50,7 +50,7 @@ def render_template(template_name: str, **kwargs: Any) -> str:
 
 def generate_code() -> str:
     """Generate code"""
-    return f"{random.randint(0000000, 99_999_999):08d}"
+    return f"{secrets.randbelow(100_000_000):08d}"
 
 
 async def send_email(to: str, subject: str, body: str, message_type: str) -> None:
