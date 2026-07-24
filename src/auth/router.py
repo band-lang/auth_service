@@ -41,6 +41,7 @@ from src.limiter import limiter
 router = APIRouter()
 security = HTTPBearer()
 
+
 # Dev endpoints
 @router.get('/')
 def health_router() -> dict[str, str]:
@@ -95,7 +96,7 @@ async def create_tokens_router(
 
 
 @router.post('/tokens/refresh', response_model=CreateTokensResponse)
-@limiter.limit("3/hour")
+@limiter.limit("4/hour")
 async def refresh_tokens_router(
     request: Request,
     inputed_refresh_token: RefreshTokensRequest,
@@ -108,7 +109,7 @@ async def refresh_tokens_router(
 
 
 @router.delete('/tokens/revoke')
-@limiter.limit("3/hour")
+@limiter.limit("30/hour")
 async def revoke_tokens_router(
     request: Request,
     inputed_refresh_token: RefreshTokensRequest,
