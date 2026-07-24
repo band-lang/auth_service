@@ -35,7 +35,7 @@ When filing an issue, please include:
 
 ## Known Priority Issue
 
-The email-change flow currently only sends a verification code to the *old* email address. A correct fix should also verify ownership of the *new* address before applying the change. This is a great first contribution if you're looking for somewhere to start — see the [Known Issues](README.md#known-issues) section of the README.
+if you're looking for somewhere to start — see the [Known Issues](README.md#known-issues) section of the README.
 
 ## Pull Request Checklist
 
