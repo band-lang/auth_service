@@ -223,7 +223,7 @@ Full request/response schemas are available via the auto-generated Swagger UI at
 
 ## Known Issues
 
-- **Email change confirmation bug:** when changing an email address, the verification code is currently only sent to the *old* email address. For a secure email-change flow, a verification code should also be sent to (and confirmed against) the *new* email address before the change is applied. This is called out directly in the original project notes and is the primary known bug to fix if you pick this project back up.
+- **You can find all known issues in chapter "issues"**
 
 ## Contributing
 
