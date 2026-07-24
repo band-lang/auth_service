@@ -43,7 +43,6 @@ async def refresh_tokens_service(
 
     try:
         refresh_token.is_revoked = True
-        await db_session.commit()
 
         tokens = await create_tokens(
             db_session,
@@ -53,6 +52,7 @@ async def refresh_tokens_service(
             user_info.user_agent
         )
 
+        await db_session.commit()
     except SQLAlchemyError as e:
         await db_session.rollback()
 
