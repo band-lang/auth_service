@@ -36,7 +36,7 @@ async def change_password_request_service(
     except RedisError as e:
         raise RedisStorageError('Error with creating verification keys in redis.') from e
     
-    return {"status": "Code for changing password was been sent.", "user_id": user.id}
+    return {"status": "Code was been sent.", "user_id": user.id}
 
 
 async def change_email_request_service(
@@ -46,8 +46,7 @@ async def change_email_request_service(
 ) -> dict[str, str | int]:
     """Service for sending two codes for changing email"""
     if user.email == new_email:
-        # Change this on custom exception
-        return {"status": "New email is the same as the current email."}
+        return {"status": "New email is the same as the current email.", "user_id": user.id}
 
     old_code = generate_code()
     new_code = generate_code()
