@@ -27,7 +27,7 @@ async def _verify_code(
     try:
         async with redis_client.pipeline(transaction=True) as pipe:
             pipe.get(f"email:{code_type}:{user_id}:code")
-            pipe.get(f"email:{code_type}:{user_id}:attempts")
+            pipe.incr(f"email:{code_type}:{user_id}:attempts")
             result = await pipe.execute()
     except RedisError as e:
         raise RedisStorageError('Error with getting verification keys from redis.') from e
@@ -45,7 +45,7 @@ async def _verify_code(
         )
         raise RedisStorageError("Error with getting key with attempts counter from redis.")
     
-    if int(verif_attempts_redis) >= 5:
+    if int(verif_attempts_redis) > 5:
         try:
             await redis_client.delete(f"email:{code_type}:{user_id}:code")
             await redis_client.delete(f"email:{code_type}:{user_id}:attempts")
@@ -65,8 +65,4 @@ async def _verify_code(
             await pipe.execute()
         return
 
-    try:
-        await redis_client.incr(f'email:{code_type}:{user_id}:attempts')
-        raise IncorrectCodeError()
-    except RedisError as e:
-        raise RedisStorageError("Error with incrementing verify attempts in redis.") from e
+    raise IncorrectCodeError()
