@@ -38,6 +38,7 @@ async def register_user_service(
 
     if existing_user:
         if existing_user.is_verified:
+            verify_password(_DUMMY_HASH, user_data.password.get_secret_value())
             raise EmailAlreadyExistsError()
         else:
             try:
@@ -98,6 +99,7 @@ async def login_user_request_service(
     user = await get_user_by_email(user_data.email, db_session)
 
     if not user:
+        verify_password(_DUMMY_HASH, user_data.password.get_secret_value())
         raise UserNotFoundError()
     
     if not user.is_verified:
