@@ -6,7 +6,7 @@ from src.auth.queries import (
 )
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
-from src.auth.redis_helpers import create_tokens
+from src.auth.redis_helpers import create_tokens, delete_all_access_tokens_user
 from src.auth.exceptions import (
     InvalidTokenError,
     RefreshTokenRevokedError
@@ -33,6 +33,19 @@ async def refresh_tokens_service(
         raise InvalidTokenError()
     
     if refresh_token.is_revoked:
+        user.is_suspicious = True
+        try:
+            await delete_all_access_tokens_user(user.id, redis_client)
+            await db_session.commit()
+        except SQLAlchemyError as e:
+            await db_session.rollback()
+            raise DatabaseError("Error with setting suspicious status in database.") from e
+        except RedisError as e:
+            logger.exception(
+                msg='error with deleting tokens from redis on suspicious activity',
+                error=str(e)
+            )
+
         await queue.enqueue(
             "send_mail_suspicious_activity",
             email=user.email,
