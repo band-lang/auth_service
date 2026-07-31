@@ -107,12 +107,12 @@ class EmailAlreadyExistsError(BaseUserException):
         super().__init__(message="Email already exists.")
 
 
-class IncorrectPasswordError(BaseUserException):
+class InvalidCredentialsError(BaseUserException):
     status_code = 401
-    error_type = 'INCORRECT PASSWORD ERROR'
+    error_type = 'INVALID CREDENTIALS ERROR'
 
     def __init__(self) -> None:
-        super().__init__(message="You entered incorrect password.")
+        super().__init__(message="Incorrect email or password.")
 
 
 class PasswordNotChangedError(BaseUserException):
