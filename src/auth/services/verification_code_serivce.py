@@ -1,3 +1,4 @@
+import secrets
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from src.exceptions import RedisStorageError
@@ -57,7 +58,11 @@ async def _verify_code(
         
         raise TooManyVerificationAttemptsError()
     
-    if verif_code_redis == inputed_code:
+    # Decode verif_code_redis if it's bytes
+    if isinstance(verif_code_redis, bytes):
+        verif_code_redis = verif_code_redis.decode('utf-8')
+
+    if secrets.compare_digest(verif_code_redis, str(inputed_code)):
         # Keep keys for 30 seconds so the user can retry if the service fails
         async with redis_client.pipeline(transaction=True) as pipe:
             pipe.expire(f"email:{code_type}:{user_id}:code", 30)
