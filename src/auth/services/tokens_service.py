@@ -33,9 +33,17 @@ async def refresh_tokens_service(
         raise InvalidTokenError()
     
     if refresh_token.is_revoked:
+        user_email = user.email
+        try:
+            user.is_suspicious = True
+            await db_session.commit()
+        except SQLAlchemyError as e:
+            await db_session.rollback()
+            raise DatabaseError('Error with updating user suspicious status.') from e
+
         await queue.enqueue(
             "send_mail_suspicious_activity",
-            email=user.email,
+            email=user_email,
             ip_address=user_info.ip_address,
             user_agent=user_info.user_agent
         )
