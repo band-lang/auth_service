@@ -127,6 +127,8 @@ async def change_password_confirm_service(
     if verify_password(user.password_hash, user_data.new_password.get_secret_value()):
         raise PasswordNotChangedError()
 
+    user.is_suspicious = False
+
     return await _update_user_field_and_revoke_tokens(
         user=user,
         db_session=db_session,
