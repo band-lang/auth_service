@@ -11,7 +11,7 @@ from src.auth.queries import (
 from src.auth.exceptions import (
     EmailAlreadyExistsError,
     UserNotFoundError,
-    IncorrectPasswordError,
+    InvalidCredentialsError,
     UserNotVerifiedError
 )
 from src.auth.redis_helpers import (
@@ -98,14 +98,15 @@ async def login_user_request_service(
     user = await get_user_by_email(user_data.email, db_session)
 
     if not user:
-        raise UserNotFoundError()
+        verify_password(_DUMMY_HASH, user_data.password.get_secret_value())
+        raise InvalidCredentialsError()
     
     if not user.is_verified:
         verify_password(_DUMMY_HASH, user_data.password.get_secret_value())
         raise UserNotVerifiedError()
     
     if not verify_password(user.password_hash, user_data.password.get_secret_value()):
-        raise IncorrectPasswordError()
+        raise InvalidCredentialsError()
     
     code = generate_code()
     
