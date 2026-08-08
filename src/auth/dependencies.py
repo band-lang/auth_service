@@ -10,7 +10,7 @@ from src.auth.schemas import UserInfo
 from src.auth.exceptions import (
     TokenDamagedError,
     InvalidTokenError,
-    UserNotFoundError,
+    InvalidCredentialsError,
     UserNotVerifiedError,
     UserAccountLimited
 )
@@ -62,7 +62,7 @@ async def get_current_user(
         raise DatabaseError("Error with getting user from database")
     
     if not user:
-        raise UserNotFoundError()
+        raise InvalidCredentialsError()
     
     return user
 
