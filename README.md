@@ -2,7 +2,7 @@
 
 A lightweight, self-contained authentication micro-service built with **FastAPI**, **PostgreSQL**, and **Redis**. It handles user registration, email-based verification, login, opaque access/refresh tokens, password reset, and email change flows.
 
-> **Project status:** This project is currently **frozen** — it is not under active development while the author focuses on system programming. It is still a solid reference implementation and starting point for a production auth service. See [Known Issues](#known-issues) below before relying on it in production.
+> **Project status:** This project is currently **unfrozen!**.
 
 ## Features
 
@@ -66,7 +66,8 @@ auth_service/
 │       └── tasks/email.py       # Background email-sending tasks
 ├── alembic.ini
 ├── requirements.txt
-└── .env.example
+└── env.docker.example
+└── env.example
 ```
 
 ## Requirements
