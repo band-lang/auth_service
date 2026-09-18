@@ -3,7 +3,7 @@ services:
     image: postgres:16
     restart: unless-stopped
     env_file:
-      - .env.docker
+      - .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -33,7 +33,7 @@ services:
     build: .
     restart: unless-stopped
     env_file:
-      - .env.docker
+      - .env
     ports:
       - "8000:8000"
     volumes:
@@ -50,7 +50,7 @@ services:
     build: .
     restart: unless-stopped
     env_file:
-      - .env.docker
+      - .env
     volumes:
       - .:/app
     depends_on:
