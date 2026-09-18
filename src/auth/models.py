@@ -1,13 +1,14 @@
 from sqlalchemy import String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped
 from src.global_models import Base
+from sqlalchemy.dialects.postgresql import CITEXT
 
 
 class User(Base):
     
     __tablename__ = "users"
 
-    email: Mapped[str] = mapped_column(String(256), nullable=False, index=True)
+    email: Mapped[str] = mapped_column(CITEXT, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     totp_secret: Mapped[str] = mapped_column(String(256), nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
