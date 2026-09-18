@@ -1,6 +1,6 @@
 # Contributing to Auth Service
 
-Thanks for your interest in contributing! This project is currently in a **frozen** state (the maintainer is focused on other work), but issues and pull requests are still welcome and will be reviewed as time allows.
+Thanks for your interest in contributing! This project is currently is main for owner, but issues and pull requests are still welcome and will be reviewed as time allows.
 
 ## Getting Started
 
