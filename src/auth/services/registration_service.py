@@ -101,13 +101,12 @@ async def login_user_request_service(
         verify_password(_DUMMY_HASH, user_data.password.get_secret_value())
         raise InvalidCredentialsError()
     
-    if not user.is_verified:
-        verify_password(_DUMMY_HASH, user_data.password.get_secret_value())
-        raise UserNotVerifiedError()
-    
     if not verify_password(user.password_hash, user_data.password.get_secret_value()):
         raise InvalidCredentialsError()
     
+    if not user.is_verified:
+        raise UserNotVerifiedError()
+
     code = generate_code()
     
     try:
