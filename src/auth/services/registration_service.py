@@ -37,11 +37,14 @@ async def register_user_service(
     existing_user = await get_user_by_email(user_data.email, db_session)
 
     if existing_user:
+        # Check password before checking state to prevent user enumeration
+        is_password_valid = verify_password(existing_user.password_hash, user_data.password.get_secret_value())
+
         if existing_user.is_verified:
             raise EmailAlreadyExistsError()
         else:
             try:
-                if not verify_password(existing_user.password_hash, user_data.password.get_secret_value()):
+                if not is_password_valid:
                     existing_user.password_hash = hash_password(user_data.password.get_secret_value())
                     await db_session.commit()
 
