@@ -141,12 +141,14 @@ async def reset_password_request_router(
 async def reset_password_confirm_router(
     request: Request,
     user_data: ChangePasswordRequest,
+    user_info: UserInfo = Depends(get_user_info),
     user: User = Depends(get_user_without_suspicious_check),
     db_session: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str]:
     return await change_password_confirm_service(
         user=user,
+        user_info=user_info,
         user_data=user_data,
         db_session=db_session,
         redis_client=redis_client

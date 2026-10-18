@@ -5,12 +5,13 @@ from src.auth.models import User
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from src.exceptions import RedisStorageError, DatabaseError
+from src.workers.queue import queue
 from src.auth.exceptions import InvalidFieldNameError, PasswordNotChangedError, CodeNotFoundError
 from src.auth.redis_helpers import create_verification_keys, create_change_email_keys, delete_all_access_tokens_user
-from src.auth.services.verification_code_serivce import _verify_code
+from src.auth.services.verification_code_service import _verify_code
 from src.auth.utils.email_utils import generate_code
 from src.auth.utils.security_utils import hash_password, verify_password
-from src.auth.schemas import ChangePasswordRequest, ChangeEmailRequest
+from src.auth.schemas import ChangePasswordRequest, ChangeEmailRequest, UserInfo
 from src.auth.constants import ALLOWED_UPDATE_FIELD_NAMES
 
 
@@ -68,6 +69,7 @@ async def change_email_request_service(
 
 async def _update_user_field_and_revoke_tokens(
     user: User,
+    user_info: UserInfo,
     db_session: AsyncSession,
     redis_client: Redis,
     *,
@@ -104,12 +106,22 @@ async def _update_user_field_and_revoke_tokens(
     except RedisError as e:
         await db_session.rollback()
         raise RedisStorageError('Error with deleting access tokens from redis.') from e
+
+    await queue.enqueue(
+            "send_mail_password_change_notification",
+            email=user.email,
+            ip_address=user_info.ip_address,
+            timeout=30,
+            retries=3,
+            retry_delay=2.0
+        )
     
     return output_value
 
 
 async def change_password_confirm_service(
     user: User,
+    user_info: UserInfo,
     user_data: ChangePasswordRequest,
     db_session: AsyncSession,
     redis_client: Redis
@@ -129,6 +141,7 @@ async def change_password_confirm_service(
 
     return await _update_user_field_and_revoke_tokens(
         user=user,
+        user_info=user_info,
         db_session=db_session,
         redis_client=redis_client,
         update_field_name='password_hash',

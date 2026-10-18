@@ -18,7 +18,7 @@ from src.auth.redis_helpers import (
     create_verification_keys,
     create_tokens
 )
-from src.auth.services.verification_code_serivce import _verify_code
+from src.auth.services.verification_code_service import _verify_code
 from src.exceptions import DatabaseError, RedisStorageError
 from src.logger import logger
 from src.auth.utils.email_utils import generate_code
@@ -56,7 +56,7 @@ async def register_user_service(
                 )
             except SQLAlchemyError as e:
                 await db_session.rollback()
-                raise DatabaseError("An occured error with refreshing password in database.") from e
+                raise DatabaseError("An occurred error with refreshing password in database.") from e
             except RedisError as e:
                 raise RedisStorageError("Redis creating verification keys error") from e
 
@@ -80,10 +80,10 @@ async def register_user_service(
         await db_session.refresh(user)
     except SQLAlchemyError as e:
         await db_session.rollback()
-        raise DatabaseError("An occured error with creating user in database.") from e
+        raise DatabaseError("An occurred error with creating user in database.") from e
     except RedisError as e:
         await db_session.rollback()
-        raise RedisStorageError("An occured error with creating verify user keys in database.") from e
+        raise RedisStorageError("An occurred error with creating verify user keys in database.") from e
     
     return {"status": "Code was successfully sent.", "user_id": user.id}
 

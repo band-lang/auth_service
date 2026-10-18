@@ -13,7 +13,7 @@ async def get_user_by_email(
     email: str,
     db_session: AsyncSession
 ) -> User | None:
-    """Return True/False or None if user not existing."""
+    """Return User object if found, otherwise None."""
 
     result = await db_session.execute(
         select(User)

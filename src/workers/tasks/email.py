@@ -46,7 +46,7 @@ async def email_task_handler(
         await func(**kwargs)
     except PERMANENT_ERRORS as e:
         logger.exception(
-            msg="permanent error in email_task_handler",
+            msg=f"permanent error in email_task_handler: {task_name}",
             arguments=kwargs,
             error=str(e)
         )
@@ -68,7 +68,7 @@ async def email_task_handler(
 
     except TEMPORARY_ERRORS as e:
         logger.exception(
-            msg="temporary error in handler send verification mail",
+            msg=f"temporary error in email_task_handler: {task_name}",
             arguments=kwargs,
             error=str(e)
         )
@@ -139,4 +139,20 @@ async def send_mail_change_email(
         send_change_email_mail,
         to=email,
         code=code
+    )
+
+
+async def send_mail_password_change_notification(
+    ctx: Context,
+    *,
+    email: str,
+    ip_address: str
+) -> None:
+    """Sending mail notify about changed password"""
+    await email_task_handler(
+        ctx,
+        "send_mail_password_change_notification",
+        send_password_change_notification,
+        to=email,
+        ip_address=ip_address
     )
