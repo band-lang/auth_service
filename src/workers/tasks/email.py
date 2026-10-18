@@ -7,7 +7,7 @@ from src.auth.utils.email_utils import (
     send_verification_mail,
     send_change_password_mail,
     send_change_email_mail,
-    send_password_change_notification,
+    send_creditionals_change_notification,
     send_suspicious_activity_notification
 )
 from src.auth.exceptions import (
@@ -142,7 +142,7 @@ async def send_mail_change_email(
     )
 
 
-async def send_mail_password_change_notification(
+async def send_mail_creditionals_change_notification(
     ctx: Context,
     *,
     email: str,
@@ -151,8 +151,8 @@ async def send_mail_password_change_notification(
     """Sending mail notify about changed password"""
     await email_task_handler(
         ctx,
-        "send_mail_password_change_notification",
-        send_password_change_notification,
+        "send_mail_creditionals_change_notification",
+        send_creditionals_change_notification,
         to=email,
         ip_address=ip_address
     )

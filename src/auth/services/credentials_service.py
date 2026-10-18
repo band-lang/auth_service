@@ -108,7 +108,7 @@ async def _update_user_field_and_revoke_tokens(
         raise RedisStorageError('Error with deleting access tokens from redis.') from e
 
     await queue.enqueue(
-            "send_mail_password_change_notification",
+            "send_mail_creditionals_change_notification",
             email=user.email,
             ip_address=user_info.ip_address,
             timeout=30,

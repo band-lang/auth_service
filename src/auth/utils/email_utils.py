@@ -232,16 +232,16 @@ async def send_change_email_mail(to: str, code: str) -> None:
     await send_email(to, subject, body, "change_email")
 
 
-async def send_password_change_notification(to: str, ip_address: str) -> None:
+async def send_creditionals_change_notification(to: str, ip_address: str) -> None:
     """Sending notify about password change"""
 
-    subject = f"На вашем аккаунте {APP_NAME} был сменён пароль."
+    subject = f"На вашем аккаунте {APP_NAME} были изменены данные."
     body = render_template(
         "password_changed.html",
         app_name=APP_NAME,
         ip_address=ip_address
     )
-    await send_email(to, subject, body, "password_change_notification")
+    await send_email(to, subject, body, "creditionals_change_notification")
 
 
 async def send_suspicious_activity_notification(to: str, ip_address: str, user_agent: str) -> None:

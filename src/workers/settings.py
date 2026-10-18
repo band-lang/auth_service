@@ -6,7 +6,7 @@ from src.workers.tasks.email import (
     send_mail_change_password,
     send_mail_change_email,
     send_mail_suspicious_activity,
-    send_mail_password_change_notification
+    send_mail_creditionals_change_notification
 )
 
 
@@ -25,7 +25,7 @@ settings = {
         send_mail_change_password,
         send_mail_change_email,
         send_mail_suspicious_activity,
-        send_mail_password_change_notification
+        send_mail_creditionals_change_notification
     ],
     "concurrency": 10,
     "startup": startup,
