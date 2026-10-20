@@ -37,18 +37,23 @@ async def register_user_service(
     existing_user = await get_user_by_email(user_data.email, db_session)
 
     if existing_user:
+        is_password_valid = verify_password(existing_user.password_hash, user_data.password.get_secret_value())
+
         if existing_user.is_verified:
             raise EmailAlreadyExistsError()
         else:
             try:
-                if not verify_password(existing_user.password_hash, user_data.password.get_secret_value()):
+                user_id = existing_user.id
+                user_email = existing_user.email
+
+                if not is_password_valid:
                     existing_user.password_hash = hash_password(user_data.password.get_secret_value())
                     await db_session.commit()
 
                 code = generate_code()
                 await create_verification_keys(
-                    existing_user.id,
-                    existing_user.email,
+                    user_id,
+                    user_email,
                     code,
                     redis_client,
                     code_type="verification",
@@ -60,7 +65,7 @@ async def register_user_service(
             except RedisError as e:
                 raise RedisStorageError("Redis creating verification keys error") from e
 
-            return {"status": "Code was successfully sent.", "user_id": existing_user.id}
+            return {"status": "Code was successfully sent.", "user_id": user_id}
 
     code = generate_code()
 
