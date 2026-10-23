@@ -41,10 +41,6 @@ async def register_user_service(
             raise EmailAlreadyExistsError()
         else:
             try:
-                if not verify_password(existing_user.password_hash, user_data.password.get_secret_value()):
-                    existing_user.password_hash = hash_password(user_data.password.get_secret_value())
-                    await db_session.commit()
-
                 code = generate_code()
                 await create_verification_keys(
                     existing_user.id,
