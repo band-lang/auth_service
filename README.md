@@ -2,7 +2,7 @@
 
 A lightweight, self-contained authentication micro-service built with **FastAPI**, **PostgreSQL**, and **Redis**. It handles user registration, email-based verification, login, opaque access/refresh tokens, password reset, and email change flows.
 
-> **Project status:** This project is currently **unfrozen!**.
+> **Project status:** This project is currently **active**.
 
 ## Features
 
@@ -17,11 +17,12 @@ A lightweight, self-contained authentication micro-service built with **FastAPI*
 - Structured logging via [structlog](https://www.structlog.org/)
 - Async SQLAlchemy 2.0 ORM + Alembic migrations
 - Argon2 password hashing with timing-attack mitigation
+- Unit tests
 
 ## Tech Stack
 
-| Component        | Technology                          |
-|-------------------|--------------------------------------|
+| Component        | Technology                           |
+|-------------------|-------------------------------------|
 | Web framework     | FastAPI + Uvicorn                   |
 | Database          | PostgreSQL (async, via SQLAlchemy 2.0 + asyncpg) |
 | Migrations        | Alembic                             |
@@ -31,6 +32,7 @@ A lightweight, self-contained authentication micro-service built with **FastAPI*
 | Password hashing  | argon2-cffi                         |
 | Validation        | Pydantic v2                         |
 | Logging           | structlog                           |
+| Tests             | pytest                              |
 
 ## Project Structure
 
@@ -64,9 +66,12 @@ auth_service/
 │       ├── settings.py          # SAQ worker settings/entrypoint
 │       ├── logging_config.py
 │       └── tasks/email.py       # Background email-sending tasks
+├── tests/
+│   ├── e2e_tests/
+│   ├── integration_tests/
+│   ├── unit_tests/
 ├── alembic.ini
 ├── requirements.txt
-└── env.docker.example
 └── env.example
 ```
 

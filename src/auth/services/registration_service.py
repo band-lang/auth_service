@@ -18,13 +18,12 @@ from src.auth.redis_helpers import (
     create_verification_keys,
     create_tokens
 )
-from src.auth.services.verification_code_service import _verify_code
+from src.auth.services.verification_code_service import verify_code
 from src.exceptions import DatabaseError, RedisStorageError
 from src.logger import logger
 from src.auth.utils.email_utils import generate_code
+from src.auth.constants import EmailJob, CodeTypes
 from src.auth.utils.security_utils import hash_password, verify_password, _DUMMY_HASH
-
-
 
 
 async def register_user_service(
@@ -51,8 +50,8 @@ async def register_user_service(
                     existing_user.email,
                     code,
                     redis_client,
-                    code_type="verification",
-                    job_func_name='send_mail_verification'
+                    code_type=CodeTypes.VERIFICATION,
+                    job_func_name=EmailJob.VERIFICATION
                 )
             except SQLAlchemyError as e:
                 await db_session.rollback()
@@ -72,8 +71,8 @@ async def register_user_service(
             user.email,
             code,
             redis_client,
-            code_type="verification",
-            job_func_name='send_mail_verification'
+            code_type=CodeTypes.VERIFICATION,
+            job_func_name=EmailJob.VERIFICATION
         )
 
         await db_session.commit()
@@ -114,8 +113,8 @@ async def login_user_request_service(
             user.id,
             user.email, code,
             redis_client,
-            code_type="verification",
-            job_func_name='send_mail_verification'
+            code_type=CodeTypes.VERIFICATION,
+            job_func_name=EmailJob.VERIFICATION
         )
     except RedisError as e:
         raise RedisStorageError("Error with creating verification keys in redis.") from e
@@ -145,17 +144,19 @@ async def create_tokens_service(
     try:
         user = await get_user_by_id(user_data.user_id, db_session)
     except SQLAlchemyError as e:
-        raise DatabaseError("Error with finding user in database.") from e
+        raise DatabaseError("Search error user in database.") from e
 
     if not user:
         raise UserNotFoundError()
     
-    await _verify_code(
-        code_type="verification",
+    await verify_code(
+        code_type=CodeTypes.VERIFICATION,
         inputed_code=user_data.code,
         user_id=user_data.user_id,
         redis_client=redis_client
     )
+
+    tokens: dict[str, str] | None = None
     
     try:
         if not user.is_verified:
@@ -179,13 +180,14 @@ async def create_tokens_service(
     except SQLAlchemyError as e:
         await db_session.rollback()
 
-        try:
-            await redis_client.delete(f"access_token:{tokens['access_token']}")
-            await redis_client.delete(f'user_sessions:{user.id}')
-        except RedisError as e:
-            logger.exception(
+        if tokens:
+            try:
+                await redis_client.delete(f"access_token:{tokens['access_token']}")
+                await redis_client.delete(f'user_sessions:{user.id}')
+            except RedisError as redis_err:
+                logger.exception(
                 msg='error with deleting tokens from redis',
-                error=str(e)
+                error=str(redis_err)
             )
 
         raise DatabaseError("Error with creating new values in database.") from e

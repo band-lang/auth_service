@@ -43,6 +43,7 @@ async def create_change_email_keys(
     new_email: str,
     old_code: str,
     new_code: str,
+    job_func_name: str,
     redis_client: Redis
 ) -> None:
     """Saves both codes and the new email to Redis, queues two email tasks."""
@@ -57,7 +58,7 @@ async def create_change_email_keys(
         await pipe.execute()
 
     await queue.enqueue(
-        "send_mail_change_email",
+        job_func_name,
         email=old_email,
         code=old_code,
         timeout=30,
@@ -66,7 +67,7 @@ async def create_change_email_keys(
     )
 
     await queue.enqueue(
-        "send_mail_change_email",
+        job_func_name,
         email=new_email,
         code=new_code,
         timeout=30,

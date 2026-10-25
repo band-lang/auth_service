@@ -15,6 +15,7 @@ from src.exceptions import RedisStorageError, DatabaseError
 from src.auth.schemas import UserInfo
 from src.logger import logger
 from src.workers.queue import queue
+from src.auth.constants import EmailJob
 
 
 async def refresh_tokens_service(
@@ -34,12 +35,14 @@ async def refresh_tokens_service(
     
     if refresh_token.is_revoked:
         await queue.enqueue(
-            "send_mail_suspicious_activity",
+            job_or_func=EmailJob.SUSPICIOUS_ACTIVITY,
             email=user.email,
             ip_address=user_info.ip_address,
             user_agent=user_info.user_agent
         )
         raise RefreshTokenRevokedError()
+
+    tokens: dict[str, str] | None = None
 
     try:
         refresh_token.is_revoked = True
@@ -56,14 +59,15 @@ async def refresh_tokens_service(
     except SQLAlchemyError as e:
         await db_session.rollback()
 
-        try:
-            await redis_client.delete(f"access_token:{tokens['access_token']}")
-            await redis_client.delete(f'user_sessions:{user.id}')
-        except RedisError as e:
-            logger.exception(
-                msg='error with deleting tokens from redis',
-                error=str(e)
-            )
+        if tokens:
+            try:
+                await redis_client.delete(f"access_token:{tokens['access_token']}")
+                await redis_client.delete(f'user_sessions:{user.id}')
+            except RedisError as redis_err:
+                logger.exception(
+                    msg='error with deleting tokens from redis',
+                    error=str(redis_err)
+                )
 
         raise DatabaseError("Error with creating refresh token in database.") from e
     except RedisError as e:

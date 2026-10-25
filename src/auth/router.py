@@ -35,6 +35,7 @@ from src.auth.services.credentials_service import (
     change_password_confirm_service,
     change_email_confirm_service
 )
+from src.auth.constants import EmailJob, CodeTypes
 from src.limiter import limiter
 
 
@@ -131,8 +132,8 @@ async def reset_password_request_router(
     return await change_password_request_service(
         user,
         redis_client,
-        code_type="password_reset",
-        job_func_name="send_mail_change_password"
+        code_type=CodeTypes.PASSWORD_RESET,
+        job_func_name=EmailJob.PASSWORD_RESET
     )
 
 
@@ -166,6 +167,7 @@ async def change_email_request_router(
     return await change_email_request_service(
         user=user,
         new_email=user_data.new_email,
+        job_func_name=EmailJob.EMAIL_CHANGE,
         redis_client=redis_client
     )
 
@@ -176,11 +178,13 @@ async def change_email_confirm_router(
     request: Request,
     user_data: ChangeEmailRequest,
     user: User = Depends(get_user_without_suspicious_check),
+    user_info: UserInfo = Depends(get_user_info),
     db_session: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str]:
     return await change_email_confirm_service(
         user=user,
+        user_info=user_info,
         user_data=user_data,
         db_session=db_session,
         redis_client=redis_client

@@ -6,7 +6,7 @@ from src.auth.exceptions import CodeNotFoundError
 from src.logger import logger
 
 
-async def _verify_code(
+async def verify_code(
     code_type: str,
     inputed_code: str,
     user_id: int,
