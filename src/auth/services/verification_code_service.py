@@ -39,34 +39,45 @@ async def verify_code(
         raise CodeNotFoundError()
     
     if not verif_attempts_redis:
-        logger.error(
+        logger.warning(
             "Attempts key not found, but code key exists",
             user_id=user_id
         )
-        raise RedisStorageError("Error with getting key with attempts counter from redis.")
-    
-    if int(verif_attempts_redis) >= 5:
         try:
             await redis_client.delete(f"email:{code_type}:{user_id}:code")
-            await redis_client.delete(f"email:{code_type}:{user_id}:attempts")
         except RedisError as e:
             logger.exception(
-                msg='error with deleting password reset keys from redis',
+                msg='error with deleting changing credentials keys from redis',
+                error=str(e)
+            )
+        raise RedisStorageError("Error with getting key with attempts counter from redis.")
+    
+    if int(verif_attempts_redis) > 5:
+        try:
+            async with redis_client.pipeline(transaction=True) as pipe:
+                pipe.delete(f"email:{code_type}:{user_id}:code")
+                pipe.delete(f"email:{code_type}:{user_id}:attempts")
+                await pipe.execute()
+        except RedisError as e:
+            logger.exception(
+                msg='error with deleting changing credentials keys from redis',
                 error=str(e)
             )
         
         raise TooManyVerificationAttemptsError()
     
     if verif_code_redis == inputed_code:
-        # Keep keys for 30 seconds so the user can retry if the service fails
-        async with redis_client.pipeline(transaction=True) as pipe:
-            pipe.expire(f"email:{code_type}:{user_id}:code", 30)
-            pipe.expire(f"email:{code_type}:{user_id}:attempts", 30)
-            await pipe.execute()
+        try:
+            async with redis_client.pipeline(transaction=True) as pipe:
+                pipe.delete(f"email:{code_type}:{user_id}:code")
+                pipe.delete(f"email:{code_type}:{user_id}:attempts")
+                await pipe.execute()
+        except RedisError as e:
+            raise RedisStorageError("Error with deleting credentials keys from redis.") from e
         return
 
     try:
         await redis_client.incr(f'email:{code_type}:{user_id}:attempts')
-        raise IncorrectCodeError()
     except RedisError as e:
         raise RedisStorageError("Error with incrementing verify attempts in redis.") from e
+    raise IncorrectCodeError()

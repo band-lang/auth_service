@@ -162,12 +162,14 @@ async def change_email_request_router(
     request: Request,
     user_data: ChangeEmailInitRequest,
     user: User = Depends(get_user_without_suspicious_check),
+    db_session = Depends(get_db),
     redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str | int]:
     return await change_email_request_service(
         user=user,
         new_email=user_data.new_email,
         job_func_name=EmailJob.EMAIL_CHANGE,
+        db_session=db_session,
         redis_client=redis_client
     )
 

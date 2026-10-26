@@ -44,8 +44,8 @@ async def change_email_request_service(
     user: User,
     new_email: str,
     job_func_name: str,
-    redis_client: Redis,
-    db_session: AsyncSession
+    db_session: AsyncSession,
+    redis_client: Redis
 ) -> dict[str, str | int]:
     """Service for sending two codes for changing email"""
     if user.email.lower() == new_email.lower():
