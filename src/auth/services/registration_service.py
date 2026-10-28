@@ -41,10 +41,6 @@ async def register_user_service(
             raise EmailAlreadyExistsError()
         else:
             try:
-                if not verify_password(existing_user.password_hash, user_data.password.get_secret_value()):
-                    existing_user.password_hash = hash_password(user_data.password.get_secret_value())
-                    await db_session.commit()
-
                 code = generate_code()
                 await create_verification_keys(
                     existing_user.id,
@@ -54,9 +50,6 @@ async def register_user_service(
                     code_type="verification",
                     job_func_name='send_mail_verification'
                 )
-            except SQLAlchemyError as e:
-                await db_session.rollback()
-                raise DatabaseError("An occurred error with refreshing password in database.") from e
             except RedisError as e:
                 raise RedisStorageError("Redis creating verification keys error") from e
 
