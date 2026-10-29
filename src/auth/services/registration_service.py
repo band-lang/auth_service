@@ -153,6 +153,7 @@ async def create_tokens_service(
     )
 
     tokens: dict[str, str] | None = None
+    user_id = user.id
     
     try:
         if not user.is_verified:
@@ -179,7 +180,7 @@ async def create_tokens_service(
         if tokens:
             try:
                 await redis_client.delete(f"access_token:{tokens['access_token']}")
-                await redis_client.delete(f'user_sessions:{user.id}')
+                await redis_client.delete(f'user_sessions:{user_id}')
             except RedisError as redis_err:
                 logger.exception(
                 msg='error with deleting tokens from redis',
