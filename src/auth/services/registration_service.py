@@ -23,7 +23,7 @@ from src.exceptions import DatabaseError, RedisStorageError
 from src.logger import logger
 from src.auth.utils.email_utils import generate_code
 from src.auth.constants import EmailJob, CodeTypes
-from src.auth.utils.security_utils import hash_password, verify_password, _DUMMY_HASH
+from src.auth.utils.security_utils import verify_password, _DUMMY_HASH
 
 
 async def register_user_service(
@@ -41,8 +41,7 @@ async def register_user_service(
         else:
             try:
                 if not verify_password(existing_user.password_hash, user_data.password.get_secret_value()):
-                    existing_user.password_hash = hash_password(user_data.password.get_secret_value())
-                    await db_session.commit()
+                    raise InvalidCredentialsError()
 
                 code = generate_code()
                 await create_verification_keys(
@@ -53,11 +52,8 @@ async def register_user_service(
                     code_type=CodeTypes.VERIFICATION,
                     job_func_name=EmailJob.VERIFICATION
                 )
-            except SQLAlchemyError as e:
-                await db_session.rollback()
-                raise DatabaseError("An occurred error with refreshing password in database.") from e
             except RedisError as e:
-                raise RedisStorageError("Redis creating verification keys error") from e
+                raise RedisStorageError("Error while creating verification keys in Redis.") from e
 
             return {"status": "Code was successfully sent.", "user_id": existing_user.id}
 
@@ -79,10 +75,10 @@ async def register_user_service(
         await db_session.refresh(user)
     except SQLAlchemyError as e:
         await db_session.rollback()
-        raise DatabaseError("An occurred error with creating user in database.") from e
+        raise DatabaseError("Error while creating user in database.") from e
     except RedisError as e:
         await db_session.rollback()
-        raise RedisStorageError("An occurred error with creating verify user keys in database.") from e
+        raise RedisStorageError("Error while creating verification keys in Redis.") from e
     
     return {"status": "Code was successfully sent.", "user_id": user.id}
 

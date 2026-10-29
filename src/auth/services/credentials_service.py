@@ -94,6 +94,8 @@ async def _update_user_field_and_revoke_tokens(
             allowed_fields=ALLOWED_UPDATE_FIELD_NAMES
         )
 
+    old_email = user.email
+    
     try:
         setattr(user, update_field_name, new_value)
 
@@ -124,7 +126,7 @@ async def _update_user_field_and_revoke_tokens(
     try:
         await queue.enqueue(
             job_or_func=EmailJob.CHANGE_CREDENTIALS_NOTIFY,
-            email=user.email,
+            email=old_email,
             ip_address=user_info.ip_address,
             timeout=30,
             retries=3,

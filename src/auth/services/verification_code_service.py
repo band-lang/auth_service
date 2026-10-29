@@ -63,7 +63,6 @@ async def verify_code(
                 msg='error with deleting changing credentials keys from redis',
                 error=str(e)
             )
-        
         raise TooManyVerificationAttemptsError()
     
     if verif_code_redis == inputed_code:
