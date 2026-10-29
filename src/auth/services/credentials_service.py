@@ -95,6 +95,7 @@ async def _update_user_field_and_revoke_tokens(
         )
 
     old_email = user.email
+    user_id = user.id
     
     try:
         setattr(user, update_field_name, new_value)
@@ -135,7 +136,7 @@ async def _update_user_field_and_revoke_tokens(
     except Exception as e:
         logger.error(
             "credentials_change_notification_enqueue_failed",
-            user_id=user.id,
+            user_id=user_id,
             error=str(e),
         )
     
