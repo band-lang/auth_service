@@ -36,26 +36,11 @@ async def register_user_service(
     existing_user = await get_user_by_email(user_data.email, db_session)
 
     if existing_user:
-        if existing_user.is_verified:
-            raise EmailAlreadyExistsError()
-        else:
-            try:
-                if not verify_password(existing_user.password_hash, user_data.password.get_secret_value()):
-                    raise InvalidCredentialsError()
-
-                code = generate_code()
-                await create_verification_keys(
-                    existing_user.id,
-                    existing_user.email,
-                    code,
-                    redis_client,
-                    code_type=CodeTypes.VERIFICATION,
-                    job_func_name=EmailJob.VERIFICATION
-                )
-            except RedisError as e:
-                raise RedisStorageError("Error while creating verification keys in Redis.") from e
-
-            return {"status": "Code was successfully sent.", "user_id": existing_user.id}
+        # In registration flows, avoid verifying passwords for existing unverified accounts
+        # to prevent creating a password brute-forcing oracle.
+        # Also avoid overwriting the password to prevent pre-account takeover vulnerabilities.
+        # Simply return an existence error unconditionally.
+        raise EmailAlreadyExistsError()
 
     code = generate_code()
 
